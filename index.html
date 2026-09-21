@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARIA &amp; HTML-mönster – testlabb för skärmläsare</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #555f6b; --line: #c5ccd3;
+    --field-bg: #ffffff; --accent: #143a52; --focus: #0b5fff; --error: #9a1f1f;
+    --html-bg: #dbe9ff; --html-fg: #0b3d91;
+    --aria-bg: #ffe3d1; --aria-fg: #8a3d00;
+    --ref-bg: #e6e6e6; --ref-fg: #3a3a3a;
+    --backdrop: rgba(10, 14, 20, 0.55);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181c; --fg: #eef1f4; --muted: #aeb7c0; --line: #3a434c;
+      --field-bg: #1d242b; --accent: #cfe4f2; --focus: #7fb0ff; --error: #ff9a9a;
+      --html-bg: #17324f; --html-fg: #bcd9ff;
+      --aria-bg: #4a2c12; --aria-fg: #ffcda3;
+      --ref-bg: #2b2f33; --ref-fg: #d8dbde;
+      --backdrop: rgba(0, 0, 0, 0.65);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    font-size: 1.05rem; line-height: 1.55; color: var(--fg); background: var(--bg);
+  }
+  a { color: var(--focus); }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .skip-link {
+    position: absolute; left: 0.5rem; top: -3rem;
+    background: var(--accent); color: var(--bg);
+    padding: 0.6rem 1rem; border-radius: 6px; z-index: 2000;
+    transition: top 0.15s ease;
+  }
+  .skip-link:focus { top: 0.5rem; }
+
+  .layout {
+    display: grid; grid-template-columns: 260px 1fr; gap: 2rem;
+    max-width: 75rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem;
+  }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+    .toc { position: static; }
+  }
+
+  .toc {
+    position: sticky; top: 1rem; align-self: start;
+    border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.1rem;
+    background: var(--field-bg);
+  }
+  .toc-title { font-weight: 700; margin: 0 0 0.5rem; }
+  .toc ul { list-style: none; margin: 0; padding-left: 0; }
+  .toc li { margin: 0.25rem 0; }
+  .toc ul ul { padding-left: 1rem; margin-top: 0.25rem; }
+  .toc a { text-decoration: none; }
+  .toc a:hover, .toc a:focus-visible { text-decoration: underline; }
+  .toc-note { color: var(--muted); font-size: 0.9rem; margin-top: 1rem; }
+
+  h1 { font-size: 1.7rem; line-height: 1.2; margin: 0.2rem 0 0.6rem; }
+  h2 { font-size: 1.5rem; margin: 2.5rem 0 0.6rem; padding-bottom: 0.3rem; border-bottom: 2px solid var(--line); }
+  h3 { font-size: 1.25rem; margin: 1.8rem 0 0.4rem; }
+  h4 { font-size: 1.05rem; margin: 0 0 0.4rem; display: flex; align-items: center; gap: 0.5rem; }
+  h5 { font-size: 1rem; margin: 0 0 0.5rem; }
+  p { margin: 0.5rem 0; }
+  .lead { color: var(--muted); max-width: 44rem; }
+  .pattern-desc { color: var(--muted); max-width: 44rem; }
+
+  .badge {
+    display: inline-block; font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    padding: 0.15rem 0.55rem; border-radius: 4px;
+  }
+  .badge-html { background: var(--html-bg); color: var(--html-fg); }
+  .badge-aria { background: var(--aria-bg); color: var(--aria-fg); }
+  .badge-ref { background: var(--ref-bg); color: var(--ref-fg); }
+
+  .variant {
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 1rem 1.25rem; margin: 1rem 0; background: var(--field-bg);
+  }
+  .variant-ref { border-style: dashed; }
+
+  label { display: block; font-weight: 600; margin: 0.8rem 0 0.3rem; }
+  select, input[type="text"] {
+    font: inherit; padding: 0.4rem 0.5rem; border: 2px solid var(--line);
+    border-radius: 5px; background: var(--bg); color: var(--fg);
+  }
+
+  button {
+    font: inherit; font-weight: 600; padding: 0.55rem 1rem; border-radius: 6px;
+    border: 2px solid var(--accent); background: var(--accent); color: var(--bg); cursor: pointer;
+  }
+  button.secondary { background: transparent; color: var(--fg); border-color: var(--line); }
+
+  .dialog-actions { display: flex; gap: 0.6rem; margin-top: 1rem; }
+  .result { color: var(--muted); font-weight: 600; min-height: 1.4rem; margin-top: 0.6rem; }
+
+  dialog {
+    border: none; border-radius: 10px; padding: 1.5rem;
+    max-width: 26rem; width: 90%;
+    color: var(--fg); background: var(--bg);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  dialog::backdrop { background: var(--backdrop); }
+
+  .custom-dialog-backdrop {
+    position: fixed; inset: 0; background: var(--backdrop);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .custom-dialog-backdrop[hidden] { display: none; }
+  .custom-dialog {
+    background: var(--bg); color: var(--fg); border-radius: 10px;
+    padding: 1.5rem; max-width: 26rem; width: 90%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  #popover-html {
+    border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.25rem;
+    background: var(--bg); color: var(--fg);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    max-width: 20rem;
+  }
+  .custom-popup {
+    position: fixed; top: 18%; left: 50%; transform: translateX(-50%);
+    background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 1rem 1.25rem; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    max-width: 20rem; z-index: 999;
+  }
+  .custom-popup[hidden] { display: none; }
+
+  .menu-trigger-wrap { position: relative; display: inline-block; }
+  .menu-list {
+    list-style: none; margin: 0.3rem 0 0; padding: 0.3rem;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25); position: absolute; min-width: 13rem; z-index: 900;
+  }
+  .menu-list[hidden] { display: none; }
+  .menu-list li { margin: 0; }
+  .menu-item {
+    display: block; width: 100%; text-align: left; padding: 0.5rem 0.8rem;
+    border: none; background: none; color: var(--fg); font: inherit; cursor: pointer; border-radius: 4px;
+  }
+  .menu-item:hover, .menu-item:focus-visible { background: var(--accent); color: var(--bg); outline: none; }
+
+  .menubar {
+    display: flex; gap: 0.3rem; list-style: none; margin: 0; padding: 0.4rem;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--field-bg);
+  }
+  .menubar > li { position: relative; margin: 0; }
+  .menubar-item {
+    padding: 0.5rem 0.9rem; border: none; background: none; color: var(--fg);
+    font: inherit; font-weight: 600; cursor: pointer; border-radius: 5px;
+  }
+  .menubar-item:hover, .menubar-item:focus-visible, .menubar-item[aria-expanded="true"] {
+    background: var(--accent); color: var(--bg); outline: none;
+  }
+  .submenu { top: 100%; left: 0; }
+
+  .context-target {
+    display: inline-block; padding: 0.8rem 1.2rem; border: 2px dashed var(--line);
+    border-radius: 8px; cursor: context-menu; background: var(--field-bg);
+  }
+  .context-target:focus-visible { border-color: var(--focus); }
+
+  .listbox-wrap, .combobox-wrap { margin: 0.6rem 0; max-width: 18rem; }
+  .aria-listbox {
+    max-width: 16rem; border: 1px solid var(--line); border-radius: 6px;
+    list-style: none; margin: 0.3rem 0; padding: 0.3rem;
+  }
+  .aria-listbox li, .menu-list [role="option"] {
+    display: block; padding: 0.4rem 0.7rem; cursor: pointer; border-radius: 4px;
+  }
+  .aria-listbox li.active, .aria-listbox li[aria-selected="true"],
+  .menu-list [role="option"].active, .menu-list [role="option"][aria-selected="true"] {
+    background: var(--accent); color: var(--bg);
+  }
+  .aria-listbox:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .combobox-trigger {
+    display: inline-block; min-width: 12rem; padding: 0.5rem 0.8rem;
+    border: 2px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); cursor: pointer;
+  }
+  .combobox-trigger:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .combobox-trigger[aria-expanded="true"] { border-color: var(--focus); }
+  .combobox-wrap input[type="text"] { width: 100%; max-width: 16rem; }
+
+  table { border-collapse: collapse; max-width: 32rem; }
+  table caption { text-align: left; font-weight: 700; margin-bottom: 0.4rem; }
+  th, td { border: 1px solid var(--line); padding: 0.5rem 0.8rem; text-align: left; }
+  thead th { background: var(--field-bg); }
+
+  .aria-grid { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; max-width: 32rem; }
+  .grid-row { display: flex; }
+  .grid-header-row { font-weight: 700; background: var(--field-bg); }
+  .grid-cell {
+    flex: 1 0 8rem; padding: 0.5rem 0.8rem; border: 1px solid var(--line);
+    display: flex; align-items: center;
+  }
+  .grid-cell:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+  .grid-toggle { padding: 0.3rem 0.8rem; }
+
+  .tablist { display: flex; gap: 0.3rem; border-bottom: 2px solid var(--line); }
+  .tab {
+    padding: 0.6rem 1rem; border: none; background: none; color: var(--fg);
+    font: inherit; font-weight: 600; cursor: pointer;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+  }
+  .tab[aria-selected="true"] { border-bottom-color: var(--accent); color: var(--accent); }
+  .tab:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .tabpanel {
+    padding: 1rem; border: 1px solid var(--line); border-top: none;
+    border-radius: 0 0 8px 8px; max-width: 32rem;
+  }
+  .tabpanel:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+
+  .accordion-item { border: 1px solid var(--line); border-radius: 6px; margin: 0.4rem 0; overflow: hidden; max-width: 32rem; }
+  .accordion-trigger {
+    display: block; width: 100%; text-align: left; padding: 0.7rem 1rem;
+    border: none; background: var(--field-bg); color: var(--fg); font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .accordion-trigger[aria-expanded="true"] { background: var(--accent); color: var(--bg); }
+  .accordion-panel { padding: 0.8rem 1rem; }
+
+  details { border: 1px solid var(--line); border-radius: 6px; margin: 0.4rem 0; max-width: 32rem; }
+  details summary { padding: 0.7rem 1rem; cursor: pointer; font-weight: 600; background: var(--field-bg); }
+  details[open] summary { background: var(--accent); color: var(--bg); }
+  details > *:not(summary) { padding: 0 1rem 0.8rem; margin: 0.6rem 0 0; }
+
+  .tooltip-wrap { position: relative; display: inline-block; }
+  .tooltip-trigger { min-width: 2.4rem; }
+  [role="tooltip"] {
+    position: absolute; top: 100%; left: 0; margin-top: 0.4rem;
+    background: var(--fg); color: var(--bg); padding: 0.3rem 0.6rem;
+    border-radius: 5px; font-size: 0.85rem; max-width: 16rem; z-index: 950;
+  }
+  [role="tooltip"][hidden] { display: none; }
+
+  .form-field { margin: 0.8rem 0; max-width: 22rem; }
+  .form-field label, .field-label { display: block; font-weight: 600; margin-bottom: 0.3rem; }
+  .hint-text { color: var(--muted); font-size: 0.9rem; margin: 0.3rem 0 0; }
+  input[type="email"], input[type="password"], input[type="tel"] {
+    font: inherit; padding: 0.4rem 0.5rem; border: 2px solid var(--line);
+    border-radius: 5px; background: var(--bg); color: var(--fg); width: 100%; max-width: 20rem;
+  }
+  input[aria-invalid="true"] { border-color: var(--error, #9a1f1f); }
+  [role="alert"]:not(:empty) { color: var(--error, #9a1f1f); font-weight: 600; margin-top: 0.4rem; }
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Hoppa till huvudinnehåll</a>
+
+<div class="layout">
+  <nav class="toc" aria-label="Innehållsförteckning">
+    <p class="toc-title">Innehåll</p>
+    <ul>
+      <li>
+        <a href="#grupp-dialoger">Dialoger</a>
+        <ul>
+          <li><a href="#modal-dialog">Modal dialog</a></li>
+          <li><a href="#alert-dialog">Alert dialog</a></li>
+          <li><a href="#icke-modal-dialog">Icke-modal dialog / popup</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#grupp-menyer">Menyer</a>
+        <ul>
+          <li><a href="#menu-button">Menu button</a></li>
+          <li><a href="#menubar">Menubar</a></li>
+          <li><a href="#kontextmeny">Kontextmeny</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#grupp-listor">Listor &amp; val</a>
+        <ul>
+          <li><a href="#listbox-single">Listbox – enkelval</a></li>
+          <li><a href="#listbox-multi">Listbox – flerval</a></li>
+          <li><a href="#combobox-select">Combobox – endast val</a></li>
+          <li><a href="#combobox-editable">Combobox – redigerbar</a></li>
+          <li><a href="#combobox-none">Combobox – utan filtrering</a></li>
+          <li><a href="#grid-tabell">Grid &amp; tabell</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#grupp-flikar">Flikar &amp; innehåll</a>
+        <ul>
+          <li><a href="#tabs">Tabs</a></li>
+          <li><a href="#accordion">Accordion</a></li>
+          <li><a href="#tooltip">Tooltip</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#grupp-formular">Formulär: etiketter &amp; beskrivningar</a>
+        <ul>
+          <li><a href="#label-labelledby">Namn: label vs aria-labelledby</a></li>
+          <li><a href="#labelledby-flera">Namn av flera delar</a></li>
+          <li><a href="#describedby-hjalptext">Beskrivning: aria-describedby</a></li>
+          <li><a href="#namn-och-beskrivning">Namn och beskrivning tillsammans</a></li>
+          <li><a href="#felmeddelande-invalid">Felmeddelande med aria-invalid</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+
+  <main id="main-content">
+    <header>
+      <h1>ARIA &amp; HTML-mönster – testlabb för skärmläsare</h1>
+      <p class="lead">En samlingssida för att höra och se hur olika HTML- och ARIA-baserade komponenter beter sig, både med skärmläsare och visuellt. Allt innehåll är fiktiv testdata från &quot;Djurparken&quot;, ingen verklig tjänst. Testa gärna varje variant både med mus och med enbart tangentbord (Tab, Skift+Tab, Escape, Enter) och jämför vad som läses upp.</p>
+    </header>
+
+    <section id="grupp-dialoger" aria-labelledby="grupp-dialoger-h">
+      <h2 id="grupp-dialoger-h">Dialoger</h2>
+
+      <section id="modal-dialog" aria-labelledby="modal-dialog-h">
+        <h3 id="modal-dialog-h">Modal dialog</h3>
+        <p class="pattern-desc">En dialog som fångar allt fokus och blockerar resten av sidan tills den stängs. Jämför hur webbläsarens inbyggda &lt;dialog&gt;-element låter mot en helt egenbyggd variant med ARIA.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Inbyggd &lt;dialog&gt; med showModal()</h4>
+          <p>Webbläsaren sköter fokusfälla, Escape-hantering och återställning av fokus automatiskt.</p>
+          <button type="button" id="btn-open-modal-html">Adoptera ett djur (HTML-dialog)</button>
+          <p class="result" id="modal-html-result" role="status" aria-live="polite"></p>
+
+          <dialog id="dialog-modal-html" aria-labelledby="dialog-modal-html-title">
+            <form method="dialog">
+              <h5 id="dialog-modal-html-title">Adoptera ett djur</h5>
+              <p>Välj vilket djur i Djurparkens sortiment du vill adoptera symboliskt.</p>
+              <label for="animal-select-html">Djur</label>
+              <select id="animal-select-html">
+                <option value="Räv">Räv</option>
+                <option value="Uggla">Uggla</option>
+                <option value="Igelkott">Igelkott</option>
+                <option value="Lodjur">Lodjur</option>
+              </select>
+              <div class="dialog-actions">
+                <button type="submit" value="cancel" formnovalidate class="secondary">Avbryt</button>
+                <button type="submit" value="confirm">Adoptera</button>
+              </div>
+            </form>
+          </dialog>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Egenbyggd med role="dialog" och aria-modal</h4>
+          <p>Fokusfälla, Escape-hantering och återställning av fokus är handkodat i JavaScript nedan.</p>
+          <button type="button" id="btn-open-modal-aria">Adoptera ett djur (ARIA-dialog)</button>
+          <p class="result" id="modal-aria-result" role="status" aria-live="polite"></p>
+
+          <div class="custom-dialog-backdrop" id="modal-aria-backdrop" hidden>
+            <div class="custom-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-aria-title" id="modal-aria">
+              <h5 id="modal-aria-title">Adoptera ett djur</h5>
+              <p>Välj vilket djur i Djurparkens sortiment du vill adoptera symboliskt.</p>
+              <label for="animal-select-aria">Djur</label>
+              <select id="animal-select-aria">
+                <option value="Räv">Räv</option>
+                <option value="Uggla">Uggla</option>
+                <option value="Igelkott">Igelkott</option>
+                <option value="Lodjur">Lodjur</option>
+              </select>
+              <div class="dialog-actions">
+                <button type="button" id="modal-aria-cancel" class="secondary">Avbryt</button>
+                <button type="button" id="modal-aria-confirm">Adoptera</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="alert-dialog" aria-labelledby="alert-dialog-h">
+        <h3 id="alert-dialog-h">Alert dialog</h3>
+        <p class="pattern-desc">En modal dialog för kritiska bekräftelser, till exempel innan något raderas. Det finns ingen semantisk HTML-motsvarighet till alertdialog, så här blir det bara en ARIA-variant, plus webbläsarens inbyggda confirm() som en extra referenspunkt.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="alertdialog"</h4>
+          <p>Fokus hamnar på knappen Avbryt när dialogen öppnas, enligt rekommenderat mönster, så att Enter av misstag inte bekräftar en oåterkallelig åtgärd.</p>
+          <button type="button" id="btn-open-alertdialog">Ta bort räven ur listan (ARIA alertdialog)</button>
+          <p class="result" id="alertdialog-result" role="status" aria-live="polite"></p>
+
+          <div class="custom-dialog-backdrop" id="alertdialog-backdrop" hidden>
+            <div class="custom-dialog" role="alertdialog" aria-modal="true" aria-labelledby="alertdialog-title" aria-describedby="alertdialog-desc" id="alertdialog">
+              <h5 id="alertdialog-title">Ta bort räv?</h5>
+              <p id="alertdialog-desc">Räven kommer tas bort från din adoptionslista. Det går inte att ångra.</p>
+              <div class="dialog-actions">
+                <button type="button" id="alertdialog-cancel" class="secondary">Avbryt</button>
+                <button type="button" id="alertdialog-confirm">Ta bort</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="variant variant-ref">
+          <h4><span class="badge badge-ref">Referens</span> Webbläsarens inbyggda confirm()</h4>
+          <p>Varken HTML eller ARIA, utan webbläsarens egen inbyggda dialogruta. Går inte att styla, men är med som ljudmässig jämförelsepunkt.</p>
+          <button type="button" id="btn-native-confirm">Ta bort uggla (webbläsarens confirm)</button>
+          <p class="result" id="native-confirm-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="icke-modal-dialog" aria-labelledby="icke-modal-dialog-h">
+        <h3 id="icke-modal-dialog-h">Icke-modal dialog / popup</h3>
+        <p class="pattern-desc">En popup som visar information utan att fånga fokus eller blockera resten av sidan. Här jämförs den nya inbyggda Popover-API:n (attributet popover) mot en helt egenbyggd variant.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Inbyggd popover (attributet popover)</h4>
+          <p>Ingen JavaScript behövs för att växla den här popupen, webbläsaren sköter visning, positionering och Escape-hantering. Kräver en någorlunda ny webbläsare (Chrome/Edge 114+, Firefox 125+).</p>
+          <button type="button" popovertarget="popover-html" id="btn-popover-html">Visa öppettider (HTML popover)</button>
+
+          <div id="popover-html" popover>
+            <h5>Djurparkens öppettider</h5>
+            <p>Vardagar 10–17<br>Helger 10–18</p>
+            <button type="button" popovertarget="popover-html" popovertargetaction="hide" class="secondary">Stäng</button>
+          </div>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Egenbyggd popup med role="dialog"</h4>
+          <p>Positionering, visning och stängning (inklusive klick utanför) är handkodat. Ingen fokusfälla, eftersom popupen är icke-modal.</p>
+          <button type="button" id="btn-popover-aria" aria-haspopup="dialog" aria-expanded="false" aria-controls="popover-aria">Visa öppettider (ARIA-popup)</button>
+
+          <div id="popover-aria" role="dialog" aria-labelledby="popover-aria-title" class="custom-popup" hidden>
+            <h5 id="popover-aria-title">Djurparkens öppettider</h5>
+            <p>Vardagar 10–17<br>Helger 10–18</p>
+            <button type="button" id="popover-aria-close" class="secondary">Stäng</button>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="grupp-menyer" aria-labelledby="grupp-menyer-h">
+      <h2 id="grupp-menyer-h">Menyer</h2>
+      <p class="pattern-desc">Ingen av de tre menytyperna nedan har någon semantisk HTML-motsvarighet, så hela gruppen är ARIA-baserad. Piltangenter navigerar, Escape stänger och Enter/mellanslag väljer, i linje med det vedertagna mönstret.</p>
+
+      <section id="menu-button" aria-labelledby="menu-button-h">
+        <h3 id="menu-button-h">Menu button (åtgärdsmeny)</h3>
+        <p class="pattern-desc">En knapp som öppnar en meny med åtgärder för ett visst objekt.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="menu" styrd med aria-haspopup</h4>
+          <p>Ner-pil öppnar menyn och fokuserar första alternativet, upp-pil öppnar och fokuserar sista.</p>
+          <div class="menu-trigger-wrap">
+            <button type="button" id="menubtn-actions" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-actions">Åtgärder för Räven</button>
+            <ul class="menu-list" id="menu-actions" role="menu" aria-labelledby="menubtn-actions" hidden>
+              <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Redigera profil">Redigera profil</button></li>
+              <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Dela med vän">Dela med vän</button></li>
+              <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Ta bort ur listan">Ta bort ur listan</button></li>
+            </ul>
+          </div>
+          <p class="result" id="menu-actions-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="menubar" aria-labelledby="menubar-h">
+        <h3 id="menubar-h">Menubar (applikationsmeny)</h3>
+        <p class="pattern-desc">En horisontell meny med undermenyer, ungefär som Arkiv/Redigera i ett skrivbordsprogram.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="menubar" med undermenyer</h4>
+          <p>Vänster/höger pil flyttar mellan huvudalternativen, ner-pil öppnar undermenyn, upp/ner navigerar i den, Escape stänger ett steg i taget.</p>
+          <ul class="menubar" id="menubar-main" role="menubar" aria-label="Djurparkens meny">
+            <li role="none">
+              <button type="button" role="menuitem" class="menubar-item" id="menubar-djur" aria-haspopup="menu" aria-expanded="false" aria-controls="menubar-djur-menu" tabindex="0">Djur</button>
+              <ul class="menu-list submenu" id="menubar-djur-menu" role="menu" aria-labelledby="menubar-djur" hidden>
+                <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Lägg till djur">Lägg till djur</button></li>
+                <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Sortera djurlista">Sortera djurlista</button></li>
+                <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Ta bort djur">Ta bort djur</button></li>
+              </ul>
+            </li>
+            <li role="none">
+              <button type="button" role="menuitem" class="menubar-item" id="menubar-mat" aria-haspopup="menu" aria-expanded="false" aria-controls="menubar-mat-menu" tabindex="-1">Mat</button>
+              <ul class="menu-list submenu" id="menubar-mat-menu" role="menu" aria-labelledby="menubar-mat" hidden>
+                <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Lägg till foder">Lägg till foder</button></li>
+                <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Beställ mer foder">Beställ mer foder</button></li>
+              </ul>
+            </li>
+          </ul>
+          <p class="result" id="menubar-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="kontextmeny" aria-labelledby="kontextmeny-h">
+        <h3 id="kontextmeny-h">Kontextmeny</h3>
+        <p class="pattern-desc">En meny som visas vid högerklick eller med tangentbordets Meny-tangent (Skift+F10).</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Egenbyggd kontextmeny (role="menu")</h4>
+          <p>Högerklicka på rutan nedan, eller tabba dit och tryck Skift+F10 eller Meny-tangenten.</p>
+          <div id="context-target" tabindex="0" class="context-target">Igelkott (högerklicka eller Skift+F10 här)</div>
+          <ul class="menu-list" id="context-menu" role="menu" aria-label="Åtgärder för Igelkott" hidden>
+            <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Visa detaljer">Visa detaljer</button></li>
+            <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Flytta till favoriter">Flytta till favoriter</button></li>
+            <li role="none"><button type="button" role="menuitem" class="menu-item" tabindex="-1" data-action="Ta bort">Ta bort</button></li>
+          </ul>
+          <p class="result" id="context-menu-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant variant-ref">
+          <h4><span class="badge badge-ref">Referens</span> Webbläsarens inbyggda kontextmeny</h4>
+          <p>Högerklicka var som helst på sidan utanför testrutan ovan för att se webbläsarens egen, ostyrbara kontextmeny, som ljudmässig jämförelse.</p>
+        </div>
+      </section>
+    </section>
+
+    <section id="grupp-listor" aria-labelledby="grupp-listor-h">
+      <h2 id="grupp-listor-h">Listor &amp; val</h2>
+      <p class="pattern-desc">Den här omgången täcker listbox och två combobox-varianter. En tredje combobox-variant (redigerbar utan filtrering) och grid/tabell läggs till senare för att hålla omgångarna hanterbara.</p>
+
+      <section id="listbox-single" aria-labelledby="listbox-single-h">
+        <h3 id="listbox-single-h">Listbox – enkelval</h3>
+        <p class="pattern-desc">En lista där ett alternativ väljs i taget. Jämför webbläsarens inbyggda &lt;select size&gt; mot en egenbyggd lista med role="listbox".</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Inbyggd &lt;select size="5"&gt;</h4>
+          <p>Med attributet size större än 1 blir en &lt;select&gt; en riktig listbox i stället för en nedfällbar meny.</p>
+          <label for="color-select-html">Favoritfärg</label>
+          <select id="color-select-html" size="5">
+            <option>Röd</option>
+            <option>Blå</option>
+            <option>Grön</option>
+            <option>Gul</option>
+            <option>Lila</option>
+          </select>
+          <p class="result" id="listbox-html-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Egenbyggd med role="listbox"</h4>
+          <p>Val följer fokus: piltangenterna flyttar markören och väljer samtidigt, via aria-activedescendant.</p>
+          <div class="listbox-wrap">
+            <span id="color-listbox-label" class="toc-title" style="display:block;">Favoritfärg</span>
+            <ul role="listbox" id="color-listbox-aria" aria-labelledby="color-listbox-label" tabindex="0" class="aria-listbox">
+              <li role="option" id="color-opt-rod">Röd</li>
+              <li role="option" id="color-opt-bla">Blå</li>
+              <li role="option" id="color-opt-gron">Grön</li>
+              <li role="option" id="color-opt-gul">Gul</li>
+              <li role="option" id="color-opt-lila">Lila</li>
+            </ul>
+          </div>
+          <p class="result" id="listbox-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="listbox-multi" aria-labelledby="listbox-multi-h">
+        <h3 id="listbox-multi-h">Listbox – flerval</h3>
+        <p class="pattern-desc">Flera alternativ kan väljas samtidigt. Piltangenterna flyttar bara markören, mellanslag växlar val av det markerade alternativet.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Inbyggd &lt;select multiple size="5"&gt;</h4>
+          <label for="color-select-multi-html">Favoritfärger</label>
+          <select id="color-select-multi-html" size="5" multiple>
+            <option>Röd</option>
+            <option>Blå</option>
+            <option>Grön</option>
+            <option>Gul</option>
+            <option>Lila</option>
+          </select>
+          <p class="result" id="listbox-multi-html-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Egenbyggd med role="listbox" och aria-multiselectable</h4>
+          <p>Mellanslag växlar val, Skift+pil förlänger ett sammanhängande urval, Ctrl+A väljer allt.</p>
+          <div class="listbox-wrap">
+            <span id="color-listbox-multi-label" class="toc-title" style="display:block;">Favoritfärger</span>
+            <ul role="listbox" id="color-listbox-multi-aria" aria-labelledby="color-listbox-multi-label" aria-multiselectable="true" tabindex="0" class="aria-listbox">
+              <li role="option" id="color-multi-opt-rod" aria-selected="false">Röd</li>
+              <li role="option" id="color-multi-opt-bla" aria-selected="false">Blå</li>
+              <li role="option" id="color-multi-opt-gron" aria-selected="false">Grön</li>
+              <li role="option" id="color-multi-opt-gul" aria-selected="false">Gul</li>
+              <li role="option" id="color-multi-opt-lila" aria-selected="false">Lila</li>
+            </ul>
+          </div>
+          <p class="result" id="listbox-multi-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="combobox-select" aria-labelledby="combobox-select-h">
+        <h3 id="combobox-select-h">Combobox – endast val</h3>
+        <p class="pattern-desc">En nedfällbar meny där man väljer ett fördefinierat alternativ, utan att kunna skriva fritext.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Vanlig &lt;select&gt;</h4>
+          <label for="dish-select-html">Dagens rätt</label>
+          <select id="dish-select-html">
+            <option value="">Välj rätt</option>
+            <option>Pannkakor</option>
+            <option>Köttbullar</option>
+            <option>Fisksoppa</option>
+            <option>Vegetarisk lasagne</option>
+            <option>Räksmörgås</option>
+          </select>
+          <p class="result" id="combobox-select-html-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Egenbyggd med role="combobox" (select-only)</h4>
+          <p>Fokus stannar på fältet hela tiden, det uppdaterade valet visas via aria-activedescendant medan listan är öppen.</p>
+          <div class="combobox-wrap">
+            <span id="dish-combo-label" class="toc-title" style="display:block;">Dagens rätt</span>
+            <div role="combobox" id="dish-combo-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-controls="dish-combo-listbox" aria-labelledby="dish-combo-label dish-combo-trigger" class="combobox-trigger">Välj rätt</div>
+            <ul role="listbox" id="dish-combo-listbox" aria-labelledby="dish-combo-label" class="menu-list" hidden>
+              <li role="option" id="dish-opt-pannkakor">Pannkakor</li>
+              <li role="option" id="dish-opt-kottbullar">Köttbullar</li>
+              <li role="option" id="dish-opt-fisksoppa">Fisksoppa</li>
+              <li role="option" id="dish-opt-lasagne">Vegetarisk lasagne</li>
+              <li role="option" id="dish-opt-rakmacka">Räksmörgås</li>
+            </ul>
+          </div>
+          <p class="result" id="combobox-select-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="combobox-editable" aria-labelledby="combobox-editable-h">
+        <h3 id="combobox-editable-h">Combobox – redigerbar med autokomplettering</h3>
+        <p class="pattern-desc">Ett textfält som filtrerar förslag medan man skriver.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Inbyggd &lt;input list&gt; med &lt;datalist&gt;</h4>
+          <p>Webbläsaren sköter filtrering och listning helt själv, ingen JavaScript krävs.</p>
+          <label for="dish-input-html">Sök efter en rätt</label>
+          <input type="text" id="dish-input-html" list="dish-datalist-html" autocomplete="off">
+          <datalist id="dish-datalist-html">
+            <option value="Pannkakor"></option>
+            <option value="Köttbullar"></option>
+            <option value="Fisksoppa"></option>
+            <option value="Vegetarisk lasagne"></option>
+            <option value="Räksmörgås"></option>
+            <option value="Falafelwrap"></option>
+            <option value="Kycklinggryta"></option>
+            <option value="Tomatsoppa"></option>
+          </datalist>
+          <p class="result" id="combobox-editable-html-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Egenbyggd med role="combobox" och aria-autocomplete="list"</h4>
+          <p>Listan byggs om vid varje tangenttryckning utifrån vad som matchar det du skrivit.</p>
+          <div class="combobox-wrap">
+            <label for="dish-input-aria">Sök efter en rätt</label>
+            <input type="text" id="dish-input-aria" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="dish-combo-aria-listbox" autocomplete="off">
+            <ul role="listbox" id="dish-combo-aria-listbox" aria-label="Förslag på rätter" class="menu-list" hidden></ul>
+          </div>
+          <p class="result" id="combobox-editable-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="combobox-none" aria-labelledby="combobox-none-h">
+        <h3 id="combobox-none-h">Combobox – redigerbar utan filtrering</h3>
+        <p class="pattern-desc">Ett textfält där man kan skriva fritt, men där förslagslistan alltid visar samma fasta alternativ oavsett vad som skrivs, till exempel senast använda val. Ingen tillförlitlig HTML-motsvarighet finns, eftersom webbläsare normalt filtrerar &lt;datalist&gt; automatiskt, så det blir bara en ARIA-variant.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="combobox" med aria-autocomplete="none"</h4>
+          <p>Listan öppnas när fältet får fokus eller vid ner-pil, och ändras inte av vad du skriver.</p>
+          <div class="combobox-wrap">
+            <label for="animal-input-aria">Skriv ett djur (senaste valen visas alltid)</label>
+            <input type="text" id="animal-input-aria" role="combobox" aria-autocomplete="none" aria-expanded="false" aria-controls="animal-combo-listbox" autocomplete="off">
+            <ul role="listbox" id="animal-combo-listbox" aria-label="Senast valda djur" class="menu-list" hidden>
+              <li role="option" id="animal-opt-rav">Räv</li>
+              <li role="option" id="animal-opt-uggla">Uggla</li>
+              <li role="option" id="animal-opt-igelkott">Igelkott</li>
+              <li role="option" id="animal-opt-lodjur">Lodjur</li>
+            </ul>
+          </div>
+          <p class="result" id="combobox-none-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="grid-tabell" aria-labelledby="grid-tabell-h">
+        <h3 id="grid-tabell-h">Grid &amp; tabell</h3>
+        <p class="pattern-desc">Två olika saker som ofta blandas ihop. En vanlig läsbar datatabell ska alltid vara en riktig &lt;table&gt;, aldrig role="grid". role="grid" är till för interaktiva rutnät där cellerna innehåller kontroller, till exempel ett kalkylblad. Här jämförs en statisk tabell mot ett redigerbart rutnät, inte samma sak byggt på två sätt.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Statisk datatabell med &lt;table&gt;</h4>
+          <p>JAWS har egna tabellkommandon (till exempel Ctrl+Alt+piltangenter) för den här typen av innehåll.</p>
+          <table>
+            <caption>Djurparkens djur</caption>
+            <thead>
+              <tr><th scope="col">Djur</th><th scope="col">Färg</th><th scope="col">Hemvist</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Räv</td><td>Orange</td><td>Skogsbrynet</td></tr>
+              <tr><td>Uggla</td><td>Brun</td><td>Trädkojan</td></tr>
+              <tr><td>Igelkott</td><td>Grå</td><td>Buskarna</td></tr>
+              <tr><td>Lodjur</td><td>Beige</td><td>Klippavdelningen</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Interaktivt rutnät med role="grid"</h4>
+          <p>Piltangenterna flyttar mellan celler i två dimensioner, Home/End går till radens första/sista cell, Ctrl+Home/End går till hela rutnätets första/sista cell. Enter/mellanslag växlar knappen i den markerade cellen.</p>
+          <div role="grid" aria-label="Djurstatus, redigerbar" id="animal-grid" class="aria-grid">
+            <div role="row" class="grid-row grid-header-row">
+              <span role="columnheader" class="grid-cell grid-header">Djur</span>
+              <span role="columnheader" class="grid-cell grid-header">Synlig</span>
+              <span role="columnheader" class="grid-cell grid-header">Favorit</span>
+            </div>
+            <div role="row" class="grid-row">
+              <span role="gridcell" class="grid-cell" tabindex="0">Räv</span>
+              <span role="gridcell" class="grid-cell"><button type="button" class="grid-toggle" tabindex="-1" aria-pressed="true" aria-label="Räv, synlig">Ja</button></span>
+              <span role="gridcell" class="grid-cell"><button type="button" class="grid-toggle" tabindex="-1" aria-pressed="false" aria-label="Räv, favorit">☆</button></span>
+            </div>
+            <div role="row" class="grid-row">
+              <span role="gridcell" class="grid-cell" tabindex="-1">Uggla</span>
+              <span role="gridcell" class="grid-cell"><button type="button" class="grid-toggle" tabindex="-1" aria-pressed="true" aria-label="Uggla, synlig">Ja</button></span>
+              <span role="gridcell" class="grid-cell"><button type="button" class="grid-toggle" tabindex="-1" aria-pressed="false" aria-label="Uggla, favorit">☆</button></span>
+            </div>
+            <div role="row" class="grid-row">
+              <span role="gridcell" class="grid-cell" tabindex="-1">Igelkott</span>
+              <span role="gridcell" class="grid-cell"><button type="button" class="grid-toggle" tabindex="-1" aria-pressed="false" aria-label="Igelkott, synlig">Nej</button></span>
+              <span role="gridcell" class="grid-cell"><button type="button" class="grid-toggle" tabindex="-1" aria-pressed="true" aria-label="Igelkott, favorit">★</button></span>
+            </div>
+            <div role="row" class="grid-row">
+              <span role="gridcell" class="grid-cell" tabindex="-1">Lodjur</span>
+              <span role="gridcell" class="grid-cell"><button type="button" class="grid-toggle" tabindex="-1" aria-pressed="true" aria-label="Lodjur, synlig">Ja</button></span>
+              <span role="gridcell" class="grid-cell"><button type="button" class="grid-toggle" tabindex="-1" aria-pressed="false" aria-label="Lodjur, favorit">☆</button></span>
+            </div>
+          </div>
+          <p class="result" id="grid-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+    </section>
+
+    <section id="grupp-flikar" aria-labelledby="grupp-flikar-h">
+      <h2 id="grupp-flikar-h">Flikar &amp; innehåll</h2>
+
+      <section id="tabs" aria-labelledby="tabs-h">
+        <h3 id="tabs-h">Tabs</h3>
+        <p class="pattern-desc">Ingen HTML-motsvarighet finns, hela mönstret är ARIA-baserat. Vänster/höger pil flyttar och aktiverar fliken direkt (automatisk aktivering).</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="tablist" med role="tab" och role="tabpanel"</h4>
+          <div role="tablist" aria-label="Om djuren" id="animal-tablist">
+            <button type="button" role="tab" id="tab-rav" aria-selected="true" aria-controls="panel-rav" tabindex="0" class="tab">Räv</button>
+            <button type="button" role="tab" id="tab-uggla" aria-selected="false" aria-controls="panel-uggla" tabindex="-1" class="tab">Uggla</button>
+            <button type="button" role="tab" id="tab-igelkott" aria-selected="false" aria-controls="panel-igelkott" tabindex="-1" class="tab">Igelkott</button>
+          </div>
+          <div role="tabpanel" id="panel-rav" aria-labelledby="tab-rav" tabindex="0" class="tabpanel">
+            <p>Räven är allätare och särskilt aktiv i skymningen.</p>
+          </div>
+          <div role="tabpanel" id="panel-uggla" aria-labelledby="tab-uggla" tabindex="0" class="tabpanel" hidden>
+            <p>Ugglan har praktiskt taget ljudlös flykt tack vare sina mjuka vingpennor.</p>
+          </div>
+          <div role="tabpanel" id="panel-igelkott" aria-labelledby="tab-igelkott" tabindex="0" class="tabpanel" hidden>
+            <p>Igelkotten rullar ihop sig till ett taggigt klot när den känner sig hotad.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="accordion" aria-labelledby="accordion-h">
+        <h3 id="accordion-h">Accordion (disclosure)</h3>
+        <p class="pattern-desc">Flera sektioner som kan visas eller döljas var för sig, oberoende av varandra. Jämför inbyggd &lt;details&gt;/&lt;summary&gt; mot en handbyggd variant.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Inbyggd &lt;details&gt;/&lt;summary&gt;</h4>
+          <details>
+            <summary>Innehåller rätterna gluten?</summary>
+            <p>Det varierar per rätt, se innehållsförteckningen under varje maträtt.</p>
+          </details>
+          <details>
+            <summary>Finns vegetariska alternativ?</summary>
+            <p>Ja, flera rätter går att beställa i en vegetarisk variant.</p>
+          </details>
+          <details>
+            <summary>Hur beställer jag?</summary>
+            <p>Välj rätt i menyn ovan och bekräfta i kassan.</p>
+          </details>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Egenbyggd med aria-expanded och aria-controls</h4>
+          <div class="accordion-item">
+            <button type="button" class="accordion-trigger" id="acc-trigger-1" aria-expanded="false" aria-controls="acc-panel-1">Innehåller rätterna gluten?</button>
+            <div class="accordion-panel" id="acc-panel-1" hidden>
+              <p>Det varierar per rätt, se innehållsförteckningen under varje maträtt.</p>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <button type="button" class="accordion-trigger" id="acc-trigger-2" aria-expanded="false" aria-controls="acc-panel-2">Finns vegetariska alternativ?</button>
+            <div class="accordion-panel" id="acc-panel-2" hidden>
+              <p>Ja, flera rätter går att beställa i en vegetarisk variant.</p>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <button type="button" class="accordion-trigger" id="acc-trigger-3" aria-expanded="false" aria-controls="acc-panel-3">Hur beställer jag?</button>
+            <div class="accordion-panel" id="acc-panel-3" hidden>
+              <p>Välj rätt i menyn ovan och bekräfta i kassan.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tooltip" aria-labelledby="tooltip-h">
+        <h3 id="tooltip-h">Tooltip</h3>
+        <p class="pattern-desc">En kort förklarande text som visas vid hover eller tangentbordsfokus. Viktigt: en tooltip ska aldrig vara det enda sättet att ge en kontroll dess tillgängliga namn, bara ett komplement till ett redan namngivet element.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Attributet title</h4>
+          <p>Kända begränsningar: title visas inte alltid vid tangentbordsfokus, och stöds olika av olika skärmläsare och webbläsarkombinationer.</p>
+          <button type="button" id="tooltip-trigger-html" class="tooltip-trigger" title="Tar bort räven permanent ur din lista." aria-label="Ta bort räv ur listan">✕</button>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="tooltip" med aria-describedby</h4>
+          <p>Visas vid både hover och tangentbordsfokus, och stängs med Escape.</p>
+          <div class="tooltip-wrap">
+            <button type="button" id="tooltip-trigger-aria" class="tooltip-trigger" aria-describedby="tooltip-aria" aria-label="Ta bort räv ur listan">✕</button>
+            <span role="tooltip" id="tooltip-aria" hidden>Tar bort räven permanent ur din lista.</span>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <section id="grupp-formular" aria-labelledby="grupp-formular-h">
+      <h2 id="grupp-formular-h">Formulär: etiketter &amp; beskrivningar</h2>
+      <p class="pattern-desc">aria-labelledby ger ett element dess tillgängliga namn, precis som &lt;label&gt; gör. aria-describedby ger en extra beskrivning som alltid läses efter namnet, aldrig i stället för det. De blandas ofta ihop, så här jämförs de sida vid sida.</p>
+
+      <section id="label-labelledby" aria-labelledby="label-labelledby-h">
+        <h3 id="label-labelledby-h">Namn: label jämfört med aria-labelledby</h3>
+        <p class="pattern-desc">Samma resultat, två olika tekniker.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Inbyggd &lt;label for&gt;</h4>
+          <div class="form-field">
+            <label for="name-input-html">Namn</label>
+            <input type="text" id="name-input-html">
+          </div>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> aria-labelledby</h4>
+          <div class="form-field">
+            <span id="name-label-aria" class="field-label">Namn</span>
+            <input type="text" id="name-input-aria" aria-labelledby="name-label-aria">
+          </div>
+        </div>
+      </section>
+
+      <section id="labelledby-flera" aria-labelledby="labelledby-flera-h">
+        <h3 id="labelledby-flera-h">Namn av flera delar</h3>
+        <p class="pattern-desc">Ingen enkel HTML-motsvarighet, eftersom &lt;label&gt; bara kan peka på ett fält i taget. Med aria-labelledby kan flera texter slås ihop till ett enda tillgängligt namn, till exempel en gruppruvrik plus fältets eget namn.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> aria-labelledby med två id:n</h4>
+          <p id="address-group-label" class="field-label">Leveransadress</p>
+          <div class="form-field">
+            <span id="postnummer-label-aria" class="field-label">Postnummer</span>
+            <input type="text" id="postnummer-input-aria" aria-labelledby="address-group-label postnummer-label-aria">
+          </div>
+          <div class="form-field">
+            <span id="gatuadress-label-aria" class="field-label">Gatuadress</span>
+            <input type="text" id="gatuadress-input-aria" aria-labelledby="address-group-label gatuadress-label-aria">
+          </div>
+        </div>
+      </section>
+
+      <section id="describedby-hjalptext" aria-labelledby="describedby-hjalptext-h">
+        <h3 id="describedby-hjalptext-h">Beskrivning: aria-describedby för hjälptext</h3>
+        <p class="pattern-desc">Ingen tillförlitlig HTML-motsvarighet, bara en ARIA-variant.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> aria-describedby</h4>
+          <div class="form-field">
+            <label for="pw-input">Lösenord</label>
+            <input type="password" id="pw-input" aria-describedby="pw-hint">
+            <p id="pw-hint" class="hint-text">Minst 8 tecken, inklusive minst en siffra.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="namn-och-beskrivning" aria-labelledby="namn-och-beskrivning-h">
+        <h3 id="namn-och-beskrivning-h">Namn och beskrivning tillsammans</h3>
+        <p class="pattern-desc">Det vanligaste verkliga fallet: ett fält har både ett namn (aria-labelledby) och en beskrivning (aria-describedby) samtidigt. Beskrivningen läggs alltid till efter namnet.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> aria-labelledby och aria-describedby tillsammans</h4>
+          <div class="form-field">
+            <span id="email-label-combo" class="field-label">E-postadress</span>
+            <input type="email" id="email-input-combo" aria-labelledby="email-label-combo" aria-describedby="email-hint-combo">
+            <p id="email-hint-combo" class="hint-text">Används bara för orderbekräftelsen.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="felmeddelande-invalid" aria-labelledby="felmeddelande-invalid-h">
+        <h3 id="felmeddelande-invalid-h">Felmeddelande med aria-describedby och aria-invalid</h3>
+        <p class="pattern-desc">Klicka Validera med ett värde som inte bara är siffror för att se felmeddelandet, kopplat via aria-describedby och läst upp direkt via role="alert". Här används role="alert" för både fel och lyckad validering för enkelhetens skull, i en riktig sida är role="status" ofta ett bättre val för det lyckade fallet.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> aria-describedby som felmeddelande</h4>
+          <div class="form-field">
+            <label for="phone-input">Telefonnummer</label>
+            <input type="tel" id="phone-input" aria-describedby="phone-feedback" aria-invalid="false">
+            <button type="button" id="phone-validate-btn">Validera</button>
+            <p id="phone-feedback" class="hint-text" role="alert"></p>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  function getFocusable(container) {
+    return Array.prototype.slice.call(
+      container.querySelectorAll('a[href], button:not([disabled]), select:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')
+    );
+  }
+
+  // Shared keydown handler for custom (ARIA-built) modal dialogs: Escape closes, Tab is trapped.
+  function handleModalKeydown(e, container, onClose) {
+    if (e.key === "Escape") { onClose(); return; }
+    if (e.key !== "Tab") { return; }
+    var focusable = getFocusable(container);
+    if (!focusable.length) { return; }
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  }
+
+  // Shared helpers for menu, menubar and context menu (roving tabindex within role="menu").
+  function getMenuItems(menu) {
+    return Array.prototype.slice.call(menu.querySelectorAll('[role="menuitem"]'));
+  }
+  function focusMenuItem(menu, index) {
+    var items = getMenuItems(menu);
+    if (!items.length) { return; }
+    var i = ((index % items.length) + items.length) % items.length;
+    items.forEach(function (it) { it.setAttribute("tabindex", "-1"); });
+    items[i].setAttribute("tabindex", "0");
+    items[i].focus();
+  }
+  function openMenu(menu, trigger, focusFirst) {
+    menu.hidden = false;
+    if (trigger) { trigger.setAttribute("aria-expanded", "true"); }
+    focusMenuItem(menu, focusFirst ? 0 : getMenuItems(menu).length - 1);
+  }
+  function closeMenu(menu, trigger, returnFocus) {
+    menu.hidden = true;
+    if (trigger) { trigger.setAttribute("aria-expanded", "false"); }
+    if (returnFocus && trigger) { trigger.focus(); }
+  }
+
+  // --- Modal dialog: HTML variant ---
+  (function () {
+    var openBtn = document.getElementById("btn-open-modal-html");
+    var dlg = document.getElementById("dialog-modal-html");
+    var select = document.getElementById("animal-select-html");
+    var result = document.getElementById("modal-html-result");
+
+    openBtn.addEventListener("click", function () { dlg.showModal(); });
+    dlg.addEventListener("close", function () {
+      if (dlg.returnValue === "confirm") {
+        result.textContent = "Du adopterade: " + select.options[select.selectedIndex].text;
+      } else {
+        result.textContent = "Adoptionen avbröts.";
+      }
+    });
+  })();
+
+  // --- Modal dialog: ARIA variant ---
+  (function () {
+    var openBtn = document.getElementById("btn-open-modal-aria");
+    var backdrop = document.getElementById("modal-aria-backdrop");
+    var dialog = document.getElementById("modal-aria");
+    var select = document.getElementById("animal-select-aria");
+    var cancelBtn = document.getElementById("modal-aria-cancel");
+    var confirmBtn = document.getElementById("modal-aria-confirm");
+    var result = document.getElementById("modal-aria-result");
+    var lastFocused = null;
+
+    function onKeydown(e) { handleModalKeydown(e, dialog, close); }
+
+    function open() {
+      lastFocused = document.activeElement;
+      backdrop.hidden = false;
+      select.focus();
+      dialog.addEventListener("keydown", onKeydown);
+    }
+    function close() {
+      backdrop.hidden = true;
+      dialog.removeEventListener("keydown", onKeydown);
+      if (lastFocused) { lastFocused.focus(); }
+    }
+
+    openBtn.addEventListener("click", open);
+    cancelBtn.addEventListener("click", function () {
+      result.textContent = "Adoptionen avbröts.";
+      close();
+    });
+    confirmBtn.addEventListener("click", function () {
+      result.textContent = "Du adopterade: " + select.options[select.selectedIndex].text;
+      close();
+    });
+  })();
+
+  // --- Alert dialog: ARIA variant ---
+  (function () {
+    var openBtn = document.getElementById("btn-open-alertdialog");
+    var backdrop = document.getElementById("alertdialog-backdrop");
+    var dialog = document.getElementById("alertdialog");
+    var cancelBtn = document.getElementById("alertdialog-cancel");
+    var confirmBtn = document.getElementById("alertdialog-confirm");
+    var result = document.getElementById("alertdialog-result");
+    var lastFocused = null;
+
+    function onKeydown(e) { handleModalKeydown(e, dialog, close); }
+
+    function open() {
+      lastFocused = document.activeElement;
+      backdrop.hidden = false;
+      cancelBtn.focus();
+      dialog.addEventListener("keydown", onKeydown);
+    }
+    function close() {
+      backdrop.hidden = true;
+      dialog.removeEventListener("keydown", onKeydown);
+      if (lastFocused) { lastFocused.focus(); }
+    }
+
+    openBtn.addEventListener("click", open);
+    cancelBtn.addEventListener("click", function () {
+      result.textContent = "Borttagningen avbröts, räven finns kvar.";
+      close();
+    });
+    confirmBtn.addEventListener("click", function () {
+      result.textContent = "Räven togs bort från listan.";
+      close();
+    });
+  })();
+
+  // --- Alert dialog: native confirm() reference ---
+  (function () {
+    var btn = document.getElementById("btn-native-confirm");
+    var result = document.getElementById("native-confirm-result");
+    btn.addEventListener("click", function () {
+      var ok = confirm("Ta bort ugglan från din adoptionslista? Det går inte att ångra.");
+      result.textContent = ok ? "Ugglan togs bort från listan." : "Borttagningen avbröts, ugglan finns kvar.";
+    });
+  })();
+
+  // --- Icke-modal popup: ARIA variant ---
+  (function () {
+    var trigger = document.getElementById("btn-popover-aria");
+    var popup = document.getElementById("popover-aria");
+    var closeBtn = document.getElementById("popover-aria-close");
+    var lastFocused = null;
+
+    function onDocClick(e) {
+      if (popup.hidden) { return; }
+      if (popup.contains(e.target) || trigger.contains(e.target)) { return; }
+      close();
+    }
+    function onKeydown(e) {
+      if (e.key === "Escape") { close(); }
+    }
+
+    function open() {
+      lastFocused = document.activeElement;
+      popup.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+      popup.querySelector("h5").setAttribute("tabindex", "-1");
+      popup.querySelector("h5").focus();
+      document.addEventListener("click", onDocClick, true);
+      document.addEventListener("keydown", onKeydown);
+    }
+    function close() {
+      popup.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+      document.removeEventListener("click", onDocClick, true);
+      document.removeEventListener("keydown", onKeydown);
+      if (lastFocused) { lastFocused.focus(); }
+    }
+
+    trigger.addEventListener("click", function () {
+      if (popup.hidden) { open(); } else { close(); }
+    });
+    closeBtn.addEventListener("click", close);
+  })();
+
+  // --- Menu button ---
+  (function () {
+    var trigger = document.getElementById("menubtn-actions");
+    var menu = document.getElementById("menu-actions");
+    var result = document.getElementById("menu-actions-result");
+
+    function open(focusFirst) { openMenu(menu, trigger, focusFirst); }
+    function close(returnFocus) { closeMenu(menu, trigger, returnFocus); }
+
+    trigger.addEventListener("click", function () {
+      if (menu.hidden) { open(true); } else { close(false); }
+    });
+    trigger.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault(); open(true);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault(); open(false);
+      }
+    });
+    menu.addEventListener("keydown", function (e) {
+      var items = getMenuItems(menu);
+      var currentIndex = items.indexOf(document.activeElement);
+      if (e.key === "ArrowDown") { e.preventDefault(); focusMenuItem(menu, currentIndex + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); focusMenuItem(menu, currentIndex - 1); }
+      else if (e.key === "Home") { e.preventDefault(); focusMenuItem(menu, 0); }
+      else if (e.key === "End") { e.preventDefault(); focusMenuItem(menu, items.length - 1); }
+      else if (e.key === "Escape") { e.preventDefault(); close(true); }
+      else if (e.key === "Tab") { close(false); }
+    });
+    getMenuItems(menu).forEach(function (item) {
+      item.addEventListener("click", function () {
+        result.textContent = "Vald åtgärd: " + item.getAttribute("data-action");
+        close(true);
+      });
+    });
+    document.addEventListener("click", function (e) {
+      if (!menu.hidden && !menu.contains(e.target) && e.target !== trigger) { close(false); }
+    });
+  })();
+
+  // --- Menubar with submenus ---
+  (function () {
+    var menubar = document.getElementById("menubar-main");
+    var topItems = Array.prototype.slice.call(menubar.querySelectorAll('[role="menuitem"]')).filter(function (el) {
+      return el.parentElement.parentElement === menubar;
+    });
+    var result = document.getElementById("menubar-result");
+    var openSubmenu = null;
+
+    function submenuFor(topItem) { return document.getElementById(topItem.getAttribute("aria-controls")); }
+
+    function closeSubmenu(returnFocus) {
+      if (!openSubmenu) { return; }
+      var trigger = document.getElementById(openSubmenu.getAttribute("aria-labelledby"));
+      openSubmenu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+      openSubmenu = null;
+      if (returnFocus) { trigger.focus(); }
+    }
+    function openSubmenuFor(topItem, focusFirst) {
+      closeSubmenu(false);
+      var sub = submenuFor(topItem);
+      sub.hidden = false;
+      topItem.setAttribute("aria-expanded", "true");
+      openSubmenu = sub;
+      focusMenuItem(sub, focusFirst ? 0 : getMenuItems(sub).length - 1);
+    }
+    function setActiveTopItem(index) {
+      var i = ((index % topItems.length) + topItems.length) % topItems.length;
+      topItems.forEach(function (it) { it.setAttribute("tabindex", "-1"); });
+      topItems[i].setAttribute("tabindex", "0");
+      topItems[i].focus();
+      return i;
+    }
+
+    topItems.forEach(function (topItem) {
+      topItem.addEventListener("click", function () {
+        if (openSubmenu === submenuFor(topItem)) { closeSubmenu(true); } else { openSubmenuFor(topItem, true); }
+      });
+      topItem.addEventListener("keydown", function (e) {
+        var currentIndex = topItems.indexOf(topItem);
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          var i1 = setActiveTopItem(currentIndex + 1);
+          if (openSubmenu) { openSubmenuFor(topItems[i1], true); }
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          var i2 = setActiveTopItem(currentIndex - 1);
+          if (openSubmenu) { openSubmenuFor(topItems[i2], true); }
+        } else if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+          e.preventDefault(); openSubmenuFor(topItem, true);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault(); openSubmenuFor(topItem, false);
+        } else if (e.key === "Home") {
+          e.preventDefault(); setActiveTopItem(0);
+        } else if (e.key === "End") {
+          e.preventDefault(); setActiveTopItem(topItems.length - 1);
+        } else if (e.key === "Escape") {
+          e.preventDefault(); closeSubmenu(true);
+        }
+      });
+    });
+
+    Array.prototype.slice.call(menubar.querySelectorAll('[role="menu"]')).forEach(function (sub) {
+      sub.addEventListener("keydown", function (e) {
+        var items = getMenuItems(sub);
+        var currentIndex = items.indexOf(document.activeElement);
+        if (e.key === "ArrowDown") { e.preventDefault(); focusMenuItem(sub, currentIndex + 1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); focusMenuItem(sub, currentIndex - 1); }
+        else if (e.key === "Home") { e.preventDefault(); focusMenuItem(sub, 0); }
+        else if (e.key === "End") { e.preventDefault(); focusMenuItem(sub, items.length - 1); }
+        else if (e.key === "Escape") { e.preventDefault(); closeSubmenu(true); }
+        else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+          e.preventDefault();
+          var trigger = document.getElementById(sub.getAttribute("aria-labelledby"));
+          var idx = topItems.indexOf(trigger);
+          var newIdx = setActiveTopItem(idx + (e.key === "ArrowRight" ? 1 : -1));
+          openSubmenuFor(topItems[newIdx], true);
+        }
+      });
+      getMenuItems(sub).forEach(function (item) {
+        item.addEventListener("click", function () {
+          result.textContent = "Vald åtgärd: " + item.getAttribute("data-action");
+          closeSubmenu(true);
+        });
+      });
+    });
+
+    document.addEventListener("click", function (e) {
+      if (openSubmenu && !openSubmenu.contains(e.target) && !menubar.contains(e.target)) { closeSubmenu(false); }
+    });
+  })();
+
+  // --- Context menu ---
+  (function () {
+    var target = document.getElementById("context-target");
+    var menu = document.getElementById("context-menu");
+    var result = document.getElementById("context-menu-result");
+    var lastFocused = null;
+
+    function openAt(x, y) {
+      lastFocused = document.activeElement;
+      menu.hidden = false;
+      menu.style.position = "fixed";
+      menu.style.left = x + "px";
+      menu.style.top = y + "px";
+      focusMenuItem(menu, 0);
+    }
+    function close(returnFocus) {
+      menu.hidden = true;
+      if (returnFocus && lastFocused) { lastFocused.focus(); }
+    }
+
+    target.addEventListener("contextmenu", function (e) {
+      e.preventDefault();
+      openAt(e.clientX, e.clientY);
+    });
+    target.addEventListener("keydown", function (e) {
+      if (e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) {
+        e.preventDefault();
+        var rect = target.getBoundingClientRect();
+        openAt(rect.left, rect.bottom);
+      }
+    });
+    menu.addEventListener("keydown", function (e) {
+      var items = getMenuItems(menu);
+      var currentIndex = items.indexOf(document.activeElement);
+      if (e.key === "ArrowDown") { e.preventDefault(); focusMenuItem(menu, currentIndex + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); focusMenuItem(menu, currentIndex - 1); }
+      else if (e.key === "Escape") { e.preventDefault(); close(true); }
+      else if (e.key === "Tab") { close(false); }
+    });
+    getMenuItems(menu).forEach(function (item) {
+      item.addEventListener("click", function () {
+        result.textContent = "Vald åtgärd: " + item.getAttribute("data-action");
+        close(true);
+      });
+    });
+    document.addEventListener("click", function (e) {
+      if (!menu.hidden && !menu.contains(e.target) && e.target !== target) { close(false); }
+    });
+  })();
+
+  // --- Listbox: single select ---
+  (function () {
+    var htmlSelect = document.getElementById("color-select-html");
+    var htmlResult = document.getElementById("listbox-html-result");
+    htmlSelect.addEventListener("change", function () {
+      htmlResult.textContent = "Vald färg: " + htmlSelect.value;
+    });
+
+    var listbox = document.getElementById("color-listbox-aria");
+    var options = Array.prototype.slice.call(listbox.querySelectorAll('[role="option"]'));
+    var result = document.getElementById("listbox-aria-result");
+    var activeIndex = 0;
+
+    function setActive(index, announce) {
+      activeIndex = ((index % options.length) + options.length) % options.length;
+      options.forEach(function (o, i) { o.classList.toggle("active", i === activeIndex); });
+      listbox.setAttribute("aria-activedescendant", options[activeIndex].id);
+      if (announce) { result.textContent = "Vald färg: " + options[activeIndex].textContent; }
+    }
+    setActive(0, false);
+
+    listbox.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setActive(activeIndex + 1, true); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setActive(activeIndex - 1, true); }
+      else if (e.key === "Home") { e.preventDefault(); setActive(0, true); }
+      else if (e.key === "End") { e.preventDefault(); setActive(options.length - 1, true); }
+    });
+    options.forEach(function (o, i) {
+      o.addEventListener("click", function () { setActive(i, true); listbox.focus(); });
+    });
+  })();
+
+  // --- Listbox: multi select ---
+  (function () {
+    var htmlSelect = document.getElementById("color-select-multi-html");
+    var htmlResult = document.getElementById("listbox-multi-html-result");
+    htmlSelect.addEventListener("change", function () {
+      var chosen = Array.prototype.slice.call(htmlSelect.selectedOptions).map(function (o) { return o.value; });
+      htmlResult.textContent = chosen.length ? "Valda färger: " + chosen.join(", ") : "Inga färger valda.";
+    });
+
+    var listbox = document.getElementById("color-listbox-multi-aria");
+    var options = Array.prototype.slice.call(listbox.querySelectorAll('[role="option"]'));
+    var result = document.getElementById("listbox-multi-aria-result");
+    var activeIndex = 0;
+    var anchorIndex = 0;
+
+    function setActiveOnly(index) {
+      activeIndex = ((index % options.length) + options.length) % options.length;
+      options.forEach(function (o, i) { o.classList.toggle("active", i === activeIndex); });
+      listbox.setAttribute("aria-activedescendant", options[activeIndex].id);
+    }
+    function toggleSelection(index) {
+      var opt = options[index];
+      opt.setAttribute("aria-selected", opt.getAttribute("aria-selected") === "true" ? "false" : "true");
+    }
+    function selectRange(from, to) {
+      var start = Math.min(from, to), end = Math.max(from, to);
+      options.forEach(function (o, i) { o.setAttribute("aria-selected", (i >= start && i <= end) ? "true" : "false"); });
+    }
+    function updateResult() {
+      var chosen = options.filter(function (o) { return o.getAttribute("aria-selected") === "true"; }).map(function (o) { return o.textContent; });
+      result.textContent = chosen.length ? "Valda färger: " + chosen.join(", ") : "Inga färger valda.";
+    }
+    setActiveOnly(0);
+
+    listbox.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault(); setActiveOnly(activeIndex + 1);
+        if (e.shiftKey) { selectRange(anchorIndex, activeIndex); updateResult(); }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault(); setActiveOnly(activeIndex - 1);
+        if (e.shiftKey) { selectRange(anchorIndex, activeIndex); updateResult(); }
+      } else if (e.key === " ") {
+        e.preventDefault(); toggleSelection(activeIndex); anchorIndex = activeIndex; updateResult();
+      } else if (e.key === "Home") {
+        e.preventDefault(); setActiveOnly(0);
+      } else if (e.key === "End") {
+        e.preventDefault(); setActiveOnly(options.length - 1);
+      } else if ((e.key === "a" || e.key === "A") && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault(); options.forEach(function (o) { o.setAttribute("aria-selected", "true"); }); updateResult();
+      }
+    });
+    options.forEach(function (o, i) {
+      o.addEventListener("click", function (e) {
+        setActiveOnly(i);
+        if (e.shiftKey) { selectRange(anchorIndex, i); } else { toggleSelection(i); anchorIndex = i; }
+        updateResult();
+        listbox.focus();
+      });
+    });
+  })();
+
+  // --- Combobox: select-only ---
+  (function () {
+    var htmlSelect = document.getElementById("dish-select-html");
+    var htmlResult = document.getElementById("combobox-select-html-result");
+    htmlSelect.addEventListener("change", function () {
+      htmlResult.textContent = htmlSelect.value ? "Vald rätt: " + htmlSelect.value : "";
+    });
+
+    var trigger = document.getElementById("dish-combo-trigger");
+    var listbox = document.getElementById("dish-combo-listbox");
+    var options = getMenuItems(listbox);
+    var result = document.getElementById("combobox-select-aria-result");
+    var activeIndex = 0;
+    var isOpen = false;
+
+    function highlight(index) {
+      activeIndex = ((index % options.length) + options.length) % options.length;
+      options.forEach(function (o, i) { o.classList.toggle("active", i === activeIndex); });
+      trigger.setAttribute("aria-activedescendant", options[activeIndex].id);
+    }
+    function open() {
+      isOpen = true;
+      listbox.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+      highlight(activeIndex);
+    }
+    function close() {
+      isOpen = false;
+      listbox.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.removeAttribute("aria-activedescendant");
+    }
+    function choose(index) {
+      activeIndex = index;
+      trigger.textContent = options[index].textContent;
+      result.textContent = "Vald rätt: " + options[index].textContent;
+      close();
+      trigger.focus();
+    }
+
+    trigger.addEventListener("click", function () { if (isOpen) { close(); } else { open(); } });
+    trigger.addEventListener("keydown", function (e) {
+      if (!isOpen) {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
+          e.preventDefault(); open();
+        }
+        return;
+      }
+      if (e.key === "ArrowDown") { e.preventDefault(); highlight(activeIndex + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); highlight(activeIndex - 1); }
+      else if (e.key === "Home") { e.preventDefault(); highlight(0); }
+      else if (e.key === "End") { e.preventDefault(); highlight(options.length - 1); }
+      else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(activeIndex); }
+      else if (e.key === "Escape") { e.preventDefault(); close(); }
+      else if (e.key === "Tab") { close(); }
+    });
+    options.forEach(function (o, i) {
+      o.addEventListener("click", function () { choose(i); });
+    });
+    document.addEventListener("click", function (e) {
+      if (isOpen && !listbox.contains(e.target) && e.target !== trigger) { close(); }
+    });
+  })();
+
+  // --- Combobox: editable with filtered autocomplete ---
+  (function () {
+    var htmlInput = document.getElementById("dish-input-html");
+    var htmlResult = document.getElementById("combobox-editable-html-result");
+    htmlInput.addEventListener("change", function () {
+      htmlResult.textContent = htmlInput.value ? "Skrivet/valt: " + htmlInput.value : "";
+    });
+
+    var DISHES = ["Pannkakor", "Köttbullar", "Fisksoppa", "Vegetarisk lasagne", "Räksmörgås", "Falafelwrap", "Kycklinggryta", "Tomatsoppa"];
+    var input = document.getElementById("dish-input-aria");
+    var listbox = document.getElementById("dish-combo-aria-listbox");
+    var result = document.getElementById("combobox-editable-aria-result");
+    var activeIndex = -1;
+    var currentMatches = [];
+
+    function renderMatches(matches) {
+      currentMatches = matches;
+      listbox.innerHTML = "";
+      matches.forEach(function (dish, i) {
+        var li = document.createElement("li");
+        li.setAttribute("role", "option");
+        li.id = "dish-aria-opt-" + i;
+        li.textContent = dish;
+        li.addEventListener("click", function () { choose(i); });
+        listbox.appendChild(li);
+      });
+      activeIndex = -1;
+      input.removeAttribute("aria-activedescendant");
+    }
+    function openList(matches) {
+      renderMatches(matches);
+      var show = matches.length > 0;
+      listbox.hidden = !show;
+      input.setAttribute("aria-expanded", show ? "true" : "false");
+    }
+    function closeList() {
+      listbox.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    }
+    function highlight(index) {
+      if (!currentMatches.length) { return; }
+      activeIndex = ((index % currentMatches.length) + currentMatches.length) % currentMatches.length;
+      var items = Array.prototype.slice.call(listbox.querySelectorAll('[role="option"]'));
+      items.forEach(function (o, i) { o.classList.toggle("active", i === activeIndex); });
+      input.setAttribute("aria-activedescendant", items[activeIndex].id);
+    }
+    function choose(index) {
+      input.value = currentMatches[index];
+      result.textContent = "Vald rätt: " + currentMatches[index];
+      closeList();
+    }
+
+    input.addEventListener("input", function () {
+      var q = input.value.trim().toLowerCase();
+      if (!q) { closeList(); return; }
+      var matches = DISHES.filter(function (d) { return d.toLowerCase().indexOf(q) !== -1; });
+      openList(matches);
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") {
+        if (listbox.hidden) { openList(DISHES.filter(function (d) { return d.toLowerCase().indexOf(input.value.trim().toLowerCase()) !== -1; })); }
+        e.preventDefault(); highlight(activeIndex + 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault(); highlight(activeIndex - 1);
+      } else if (e.key === "Enter") {
+        if (activeIndex >= 0) { e.preventDefault(); choose(activeIndex); }
+      } else if (e.key === "Escape") {
+        closeList();
+      }
+    });
+    document.addEventListener("click", function (e) {
+      if (!listbox.hidden && !listbox.contains(e.target) && e.target !== input) { closeList(); }
+    });
+  })();
+
+  // --- Combobox: editable, unfiltered suggestion list ---
+  (function () {
+    var input = document.getElementById("animal-input-aria");
+    var listbox = document.getElementById("animal-combo-listbox");
+    var options = getMenuItems(listbox);
+    var result = document.getElementById("combobox-none-result");
+    var activeIndex = -1;
+
+    function open() {
+      listbox.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+    }
+    function close() {
+      listbox.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+      activeIndex = -1;
+    }
+    function highlight(index) {
+      activeIndex = ((index % options.length) + options.length) % options.length;
+      options.forEach(function (o, i) { o.classList.toggle("active", i === activeIndex); });
+      input.setAttribute("aria-activedescendant", options[activeIndex].id);
+    }
+    function choose(index) {
+      input.value = options[index].textContent;
+      result.textContent = "Valt djur: " + options[index].textContent;
+      close();
+    }
+
+    input.addEventListener("focus", open);
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") {
+        if (listbox.hidden) { open(); }
+        e.preventDefault(); highlight(activeIndex + 1);
+      } else if (e.key === "ArrowUp") {
+        if (listbox.hidden) { open(); }
+        e.preventDefault(); highlight(activeIndex - 1);
+      } else if (e.key === "Enter") {
+        if (activeIndex >= 0) { e.preventDefault(); choose(activeIndex); }
+      } else if (e.key === "Escape") {
+        close();
+      }
+    });
+    options.forEach(function (o, i) {
+      o.addEventListener("click", function () { choose(i); });
+    });
+    document.addEventListener("click", function (e) {
+      if (!listbox.hidden && !listbox.contains(e.target) && e.target !== input) { close(); }
+    });
+  })();
+
+  // --- Grid: interactive data grid ---
+  (function () {
+    var grid = document.getElementById("animal-grid");
+    var result = document.getElementById("grid-result");
+    var rows = Array.prototype.slice.call(grid.querySelectorAll(".grid-row:not(.grid-header-row)"));
+
+    function targetFor(cell) {
+      var btn = cell.querySelector("button");
+      return btn || cell;
+    }
+    var rowTargets = rows.map(function (row) {
+      return Array.prototype.slice.call(row.querySelectorAll(".grid-cell")).map(targetFor);
+    });
+
+    var currentRow = 0;
+    var currentCol = 0;
+
+    function setActive(r, c) {
+      rowTargets.forEach(function (targets) {
+        targets.forEach(function (t) { t.setAttribute("tabindex", "-1"); });
+      });
+      currentRow = ((r % rowTargets.length) + rowTargets.length) % rowTargets.length;
+      var cols = rowTargets[currentRow].length;
+      currentCol = ((c % cols) + cols) % cols;
+      var target = rowTargets[currentRow][currentCol];
+      target.setAttribute("tabindex", "0");
+      target.focus();
+    }
+
+    grid.addEventListener("keydown", function (e) {
+      if (e.ctrlKey && e.key === "Home") {
+        e.preventDefault(); setActive(0, 0);
+      } else if (e.ctrlKey && e.key === "End") {
+        e.preventDefault(); setActive(rowTargets.length - 1, rowTargets[rowTargets.length - 1].length - 1);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault(); setActive(currentRow, currentCol + 1);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault(); setActive(currentRow, currentCol - 1);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault(); setActive(currentRow + 1, currentCol);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault(); setActive(currentRow - 1, currentCol);
+      } else if (e.key === "Home") {
+        e.preventDefault(); setActive(currentRow, 0);
+      } else if (e.key === "End") {
+        e.preventDefault(); setActive(currentRow, rowTargets[currentRow].length - 1);
+      }
+    });
+
+    Array.prototype.slice.call(grid.querySelectorAll(".grid-toggle")).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var pressed = btn.getAttribute("aria-pressed") === "true";
+        var isVisible = btn.getAttribute("aria-label").indexOf("synlig") !== -1;
+        btn.setAttribute("aria-pressed", pressed ? "false" : "true");
+        btn.textContent = isVisible ? (pressed ? "Nej" : "Ja") : (pressed ? "☆" : "★");
+        result.textContent = btn.getAttribute("aria-label") + ": " + (pressed ? "av" : "på");
+      });
+    });
+  })();
+
+  // --- Tabs ---
+  (function () {
+    var tablist = document.getElementById("animal-tablist");
+    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+
+    function activate(index) {
+      var i = ((index % tabs.length) + tabs.length) % tabs.length;
+      tabs.forEach(function (tab, j) {
+        var selected = j === i;
+        tab.setAttribute("aria-selected", selected ? "true" : "false");
+        tab.setAttribute("tabindex", selected ? "0" : "-1");
+        document.getElementById(tab.getAttribute("aria-controls")).hidden = !selected;
+      });
+      tabs[i].focus();
+    }
+
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener("click", function () { activate(i); });
+      tab.addEventListener("keydown", function (e) {
+        if (e.key === "ArrowRight") { e.preventDefault(); activate(i + 1); }
+        else if (e.key === "ArrowLeft") { e.preventDefault(); activate(i - 1); }
+        else if (e.key === "Home") { e.preventDefault(); activate(0); }
+        else if (e.key === "End") { e.preventDefault(); activate(tabs.length - 1); }
+      });
+    });
+  })();
+
+  // --- Accordion (ARIA variant only, <details> needs no JS) ---
+  (function () {
+    var triggers = Array.prototype.slice.call(document.querySelectorAll(".accordion-trigger"));
+    triggers.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var expanded = btn.getAttribute("aria-expanded") === "true";
+        btn.setAttribute("aria-expanded", expanded ? "false" : "true");
+        document.getElementById(btn.getAttribute("aria-controls")).hidden = expanded;
+      });
+    });
+  })();
+
+  // --- Tooltip (ARIA variant only, title needs no JS) ---
+  (function () {
+    var trigger = document.getElementById("tooltip-trigger-aria");
+    var tooltip = document.getElementById("tooltip-aria");
+
+    function show() { tooltip.hidden = false; }
+    function hide() { tooltip.hidden = true; }
+
+    trigger.addEventListener("focus", show);
+    trigger.addEventListener("blur", hide);
+    trigger.addEventListener("mouseenter", show);
+    trigger.addEventListener("mouseleave", hide);
+    trigger.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { hide(); }
+    });
+  })();
+
+  // --- Form: aria-describedby error message with aria-invalid ---
+  (function () {
+    var input = document.getElementById("phone-input");
+    var btn = document.getElementById("phone-validate-btn");
+    var feedback = document.getElementById("phone-feedback");
+
+    btn.addEventListener("click", function () {
+      var digitsOnly = /^\d{6,}$/.test(input.value.replace(/\s+/g, ""));
+      if (digitsOnly) {
+        input.setAttribute("aria-invalid", "false");
+        feedback.textContent = "Telefonnumret ser korrekt ut.";
+      } else {
+        input.setAttribute("aria-invalid", "true");
+        feedback.textContent = "Ange telefonnumret som siffror, till exempel 0701234567.";
+      }
+    });
+  })();
+})();
+</script>
+</body>
+</html>
