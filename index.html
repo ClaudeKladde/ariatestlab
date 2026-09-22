@@ -54,13 +54,22 @@
     border: 1px solid var(--line); border-radius: 8px; padding: 1rem 1.1rem;
     background: var(--field-bg);
   }
-  .toc-title { font-weight: 700; margin: 0 0 0.5rem; }
+  .toc-toggle {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    width: 100%; background: none; border: none; padding: 0; margin: 0 0 0.5rem;
+    color: var(--fg); font: inherit; text-align: left; cursor: pointer;
+  }
+  .toc-title { font-weight: 700; margin: 0; }
+  .toc-toggle-icon { flex-shrink: 0; transition: transform 0.15s ease; }
+  .toc-toggle[aria-expanded="false"] .toc-toggle-icon { transform: rotate(-90deg); }
+  #toc-list[hidden] { display: none; }
   .toc ul { list-style: none; margin: 0; padding-left: 0; }
   .toc li { margin: 0.25rem 0; }
   .toc ul ul { padding-left: 1rem; margin-top: 0.25rem; }
   .toc a { text-decoration: none; }
   .toc a:hover, .toc a:focus-visible { text-decoration: underline; }
   .toc-note { color: var(--muted); font-size: 0.9rem; margin-top: 1rem; }
+  main [tabindex="-1"]:focus { scroll-margin-top: 1rem; }
 
   h1 { font-size: 1.7rem; line-height: 1.2; margin: 0.2rem 0 0.6rem; }
   h2 { font-size: 1.5rem; margin: 2.5rem 0 0.6rem; padding-bottom: 0.3rem; border-bottom: 2px solid var(--line); }
@@ -257,8 +266,11 @@
 
 <div class="layout">
   <nav class="toc" aria-label="Innehållsförteckning">
-    <p class="toc-title">Innehåll</p>
-    <ul>
+    <button type="button" class="toc-toggle" id="toc-toggle" aria-expanded="true" aria-controls="toc-list">
+      <span class="toc-title">Innehåll</span>
+      <span class="toc-toggle-icon" aria-hidden="true">▾</span>
+    </button>
+    <ul id="toc-list">
       <li>
         <a href="#grupp-dialoger">Dialoger</a>
         <ul>
@@ -913,6 +925,41 @@
       container.querySelectorAll('a[href], button:not([disabled]), select:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')
     );
   }
+
+  // --- Table of contents: expand/collapse toggle + accessible anchor navigation ---
+  (function () {
+    var nav = document.querySelector(".toc");
+    var toggle = document.getElementById("toc-toggle");
+    var list = document.getElementById("toc-list");
+
+    function setExpanded(expanded) {
+      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      list.hidden = !expanded;
+    }
+
+    // Collapsed by default on narrow (mobile) screens, so screen reader and keyboard
+    // users aren't forced through the full list before reaching the page content.
+    setExpanded(!window.matchMedia("(max-width: 760px)").matches);
+
+    toggle.addEventListener("click", function () {
+      setExpanded(toggle.getAttribute("aria-expanded") !== "true");
+    });
+
+    // Plain in-page anchors move the visual scroll position but not the screen
+    // reader's reading cursor, which makes it seem like the links "don't work" and
+    // traps the user in this list. Focusing the target section explicitly fixes that.
+    Array.prototype.slice.call(nav.querySelectorAll('a[href^="#"]')).forEach(function (link) {
+      link.addEventListener("click", function (e) {
+        var target = document.getElementById(link.getAttribute("href").slice(1));
+        if (!target) { return; }
+        e.preventDefault();
+        if (!target.hasAttribute("tabindex")) { target.setAttribute("tabindex", "-1"); }
+        target.focus();
+        history.pushState(null, "", link.getAttribute("href"));
+        if (window.matchMedia("(max-width: 760px)").matches) { setExpanded(false); }
+      });
+    });
+  })();
 
   // Shared keydown handler for custom (ARIA-built) modal dialogs: Escape closes, Tab is trapped.
   function handleModalKeydown(e, container, onClose) {
