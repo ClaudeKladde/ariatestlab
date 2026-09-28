@@ -1663,7 +1663,8 @@
         e.preventDefault();
         if (!target.hasAttribute("tabindex")) { target.setAttribute("tabindex", "-1"); }
         target.focus();
-        history.pushState(null, "", link.getAttribute("href"));
+        // Sandboxed frames (e.g. embedded previews) may block history updates; navigation still works without it.
+        try { history.pushState(null, "", link.getAttribute("href")); } catch (err) { /* ignore */ }
         if (window.matchMedia("(max-width: 760px)").matches) { setExpanded(false); }
       });
     });
