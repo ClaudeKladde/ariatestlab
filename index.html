@@ -45,8 +45,7 @@
     max-width: 75rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem;
   }
   @media (max-width: 760px) {
-    .layout { grid-template-columns: 1fr; }
-    .toc { position: static; }
+    .layout { grid-template-columns: minmax(0, 1fr); }
   }
 
   .toc {
@@ -430,6 +429,19 @@
   .sortable th button:focus-visible { outline-offset: -3px; }
   .sort-icon { color: var(--muted); }
   .sortable th[aria-sort] .sort-icon { color: var(--fg); }
+
+  /* Tables and the grid scroll sideways inside their own box instead of widening the page. */
+  .table-scroll { max-width: 100%; overflow-x: auto; }
+  .table-scroll > .aria-grid { min-width: 24rem; }
+
+  /* Must come after the base .toc rule, otherwise the sticky position wins on mobile. */
+  @media (max-width: 760px) {
+    .toc { position: static; }
+    .variant { padding: 1rem 0.8rem; }
+    th, td, .sortable th button, .grid-cell { padding: 0.4rem 0.5rem; }
+    .site-nav-list { flex-direction: column; }
+    .site-subnav, .site-nav details > .site-subnav { position: static; margin: 0.2rem 0 0.4rem 1rem; box-shadow: none; }
+  }
 </style>
 </head>
 <body>
@@ -1006,8 +1018,9 @@
         <div class="variant">
           <h4><span class="badge badge-html">HTML</span> Statisk datatabell med &lt;table&gt;</h4>
           <p>JAWS har egna tabellkommandon (till exempel Ctrl+Alt+piltangenter) för den här typen av innehåll.</p>
+          <div class="table-scroll" data-scroll-label="static-table-caption">
           <table>
-            <caption>Djurparkens djur</caption>
+            <caption id="static-table-caption">Djurparkens djur</caption>
             <thead>
               <tr><th scope="col">Djur</th><th scope="col">Färg</th><th scope="col">Hemvist</th></tr>
             </thead>
@@ -1018,11 +1031,13 @@
               <tr><td>Lodjur</td><td>Beige</td><td>Klippavdelningen</td></tr>
             </tbody>
           </table>
+          </div>
         </div>
 
         <div class="variant">
           <h4><span class="badge badge-aria">ARIA</span> Interaktivt rutnät med role="grid"</h4>
           <p>Piltangenterna flyttar mellan celler i två dimensioner, Home/End går till radens första/sista cell, Ctrl+Home/End går till hela rutnätets första/sista cell. Enter/mellanslag växlar knappen i den markerade cellen.</p>
+          <div class="table-scroll">
           <div role="grid" aria-label="Djurstatus, redigerbar" id="animal-grid" class="aria-grid">
             <div role="row" class="grid-row grid-header-row">
               <span role="columnheader" class="grid-cell grid-header">Djur</span>
@@ -1050,6 +1065,7 @@
               <span role="gridcell" class="grid-cell"><button type="button" class="grid-toggle" tabindex="-1" aria-pressed="false" aria-label="Lodjur, favorit">☆</button></span>
             </div>
           </div>
+          </div>
           <p class="result" id="grid-result" role="status" aria-live="polite"></p>
         </div>
       </section>
@@ -1061,8 +1077,9 @@
         <div class="variant">
           <h4><span class="badge badge-aria">ARIA</span> &lt;table&gt; med aria-sort och knappar i rubrikerna</h4>
           <p>Första klicket på en kolumn sorterar stigande, nästa klick fallande.</p>
+          <div class="table-scroll" data-scroll-label="sort-table-caption">
           <table class="sortable" id="sort-table">
-            <caption>Djurparkens djur. Kolumnrubrikerna är knappar som sorterar tabellen.</caption>
+            <caption id="sort-table-caption">Djurparkens djur. Kolumnrubrikerna är knappar som sorterar tabellen.</caption>
             <thead>
               <tr>
                 <th scope="col" aria-sort="ascending"><button type="button" data-type="text">Djur<span class="sort-icon" aria-hidden="true">&#9650;</span></button></th>
@@ -1078,6 +1095,7 @@
               <tr><td>Uggla</td><td>7</td><td>Trädkojan</td></tr>
             </tbody>
           </table>
+          </div>
           <p class="result" id="sort-table-result" role="status" aria-live="polite"></p>
         </div>
       </section>
@@ -2978,6 +2996,26 @@
       select(item);
       focusItem(item);
     });
+  })();
+
+  // --- Scrollable table boxes: keyboard-focusable and named only while they actually overflow ---
+  (function () {
+    var boxes = Array.prototype.slice.call(document.querySelectorAll(".table-scroll[data-scroll-label]"));
+    function update() {
+      boxes.forEach(function (box) {
+        if (box.scrollWidth > box.clientWidth + 1) {
+          box.setAttribute("tabindex", "0");
+          box.setAttribute("role", "group");
+          box.setAttribute("aria-labelledby", box.getAttribute("data-scroll-label"));
+        } else {
+          box.removeAttribute("tabindex");
+          box.removeAttribute("role");
+          box.removeAttribute("aria-labelledby");
+        }
+      });
+    }
+    update();
+    window.addEventListener("resize", update);
   })();
 
   // --- Sortable table ---
