@@ -237,8 +237,18 @@
   .accordion-panel { padding: 0.8rem 1rem; }
 
   details { border: 1px solid var(--line); border-radius: 6px; margin: 0.4rem 0; max-width: 32rem; }
-  details summary { padding: 0.7rem 1rem; cursor: pointer; font-weight: 600; background: var(--field-bg); }
+  details summary { padding: 0.7rem 1rem; cursor: pointer; font-weight: 600; background: var(--field-bg); list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
   details[open] summary { background: var(--accent); color: var(--bg); }
+
+  /* Same expand/collapse arrow for both accordion variants. The "/ ''" part hides the
+     arrow from screen readers, which already announce expanded/collapsed state. */
+  details summary::before, .accordion-trigger::before {
+    content: "\25B8"; content: "\25B8" / "";
+    display: inline-block; width: 1em; margin-right: 0.4em; text-align: center;
+    font-size: 1.2em; line-height: 1; vertical-align: -0.05em; transition: transform 0.15s ease;
+  }
+  details[open] summary::before, .accordion-trigger[aria-expanded="true"]::before { transform: rotate(90deg); }
   details > *:not(summary) { padding: 0 1rem 0.8rem; margin: 0.6rem 0 0; }
 
   .tooltip-wrap { position: relative; display: inline-block; }
@@ -359,7 +369,7 @@
 
         <div class="variant">
           <h4><span class="badge badge-aria">ARIA</span> Egenbyggd med role="dialog" och aria-modal</h4>
-          <p>Fokusfälla, Escape-hantering och återställning av fokus är handkodat i JavaScript nedan.</p>
+          <p>Fokusfälla, Escape-hantering och återställning av fokus är handkodat i JavaScript nedan. Bakomliggande innehåll görs otillgängligt med attributet inert medan dialogen är öppen, som komplement till aria-modal="true". aria-modal ensamt stöds inte lika av alla hjälpmedel, men inert döljer innehållet för alla hjälpmedel och tangentbordet.</p>
           <button type="button" id="btn-open-modal-aria">Adoptera ett djur (ARIA-dialog)</button>
           <p class="result" id="modal-aria-result" role="status" aria-live="polite"></p>
 
@@ -389,7 +399,7 @@
 
         <div class="variant">
           <h4><span class="badge badge-aria">ARIA</span> role="alertdialog"</h4>
-          <p>Fokus hamnar på knappen Avbryt när dialogen öppnas, enligt rekommenderat mönster, så att Enter av misstag inte bekräftar en oåterkallelig åtgärd.</p>
+          <p>Fokus hamnar på knappen Avbryt när dialogen öppnas, enligt rekommenderat mönster, så att Enter av misstag inte bekräftar en oåterkallelig åtgärd. Bakomliggande innehåll görs otillgängligt med inert, precis som i den egenbyggda modala dialogen ovan.</p>
           <button type="button" id="btn-open-alertdialog">Ta bort räven ur listan (ARIA alertdialog)</button>
           <p class="result" id="alertdialog-result" role="status" aria-live="polite"></p>
 
@@ -562,8 +572,10 @@
 
         <div class="variant">
           <h4><span class="badge badge-html">HTML</span> Inbyggd &lt;select multiple size="5"&gt;</h4>
+          <p>Till skillnad från den egenbyggda varianten nedan räcker inte mellanslag ensamt för att välja flera. Webbläsarens inbyggda flervalslista kräver en modifieringstangent.</p>
           <label for="color-select-multi-html">Favoritfärger</label>
-          <select id="color-select-multi-html" size="5" multiple>
+          <p id="color-select-multi-html-hint" class="hint-text">Välj flera separata: håll ned Ctrl (Cmd på Mac) och klicka. Med tangentbord: Ctrl+pil flyttar utan att ändra valet, Ctrl+mellanslag växlar val. Välj ett sammanhängande intervall: Skift+klick eller Skift+pil. I NVDA och JAWS behöver fokusläget/formulärläget vara aktivt.</p>
+          <select id="color-select-multi-html" size="5" multiple aria-describedby="color-select-multi-html-hint">
             <option>Röd</option>
             <option>Blå</option>
             <option>Grön</option>
@@ -961,6 +973,14 @@
     });
   })();
 
+  // Custom modal backdrops are moved to <body> so every sibling (the rest of the page)
+  // can be made inert while the dialog is open, without making the dialog itself inert.
+  function setPageInert(backdrop, inert) {
+    Array.prototype.slice.call(document.body.children).forEach(function (el) {
+      if (el !== backdrop && el.tagName !== "SCRIPT") { el.inert = inert; }
+    });
+  }
+
   // Shared keydown handler for custom (ARIA-built) modal dialogs: Escape closes, Tab is trapped.
   function handleModalKeydown(e, container, onClose) {
     if (e.key === "Escape") { onClose(); return; }
@@ -1026,17 +1046,20 @@
     var confirmBtn = document.getElementById("modal-aria-confirm");
     var result = document.getElementById("modal-aria-result");
     var lastFocused = null;
+    document.body.appendChild(backdrop);
 
     function onKeydown(e) { handleModalKeydown(e, dialog, close); }
 
     function open() {
       lastFocused = document.activeElement;
       backdrop.hidden = false;
+      setPageInert(backdrop, true);
       select.focus();
       dialog.addEventListener("keydown", onKeydown);
     }
     function close() {
       backdrop.hidden = true;
+      setPageInert(backdrop, false);
       dialog.removeEventListener("keydown", onKeydown);
       if (lastFocused) { lastFocused.focus(); }
     }
@@ -1061,17 +1084,20 @@
     var confirmBtn = document.getElementById("alertdialog-confirm");
     var result = document.getElementById("alertdialog-result");
     var lastFocused = null;
+    document.body.appendChild(backdrop);
 
     function onKeydown(e) { handleModalKeydown(e, dialog, close); }
 
     function open() {
       lastFocused = document.activeElement;
       backdrop.hidden = false;
+      setPageInert(backdrop, true);
       cancelBtn.focus();
       dialog.addEventListener("keydown", onKeydown);
     }
     function close() {
       backdrop.hidden = true;
+      setPageInert(backdrop, false);
       dialog.removeEventListener("keydown", onKeydown);
       if (lastFocused) { lastFocused.focus(); }
     }
@@ -1422,7 +1448,7 @@
 
     var trigger = document.getElementById("dish-combo-trigger");
     var listbox = document.getElementById("dish-combo-listbox");
-    var options = getMenuItems(listbox);
+    var options = Array.prototype.slice.call(listbox.querySelectorAll('[role="option"]'));
     var result = document.getElementById("combobox-select-aria-result");
     var activeIndex = 0;
     var isOpen = false;
@@ -1446,6 +1472,7 @@
     }
     function choose(index) {
       activeIndex = index;
+      options.forEach(function (o, i) { o.setAttribute("aria-selected", i === index ? "true" : "false"); });
       trigger.textContent = options[index].textContent;
       result.textContent = "Vald rätt: " + options[index].textContent;
       close();
@@ -1556,7 +1583,7 @@
   (function () {
     var input = document.getElementById("animal-input-aria");
     var listbox = document.getElementById("animal-combo-listbox");
-    var options = getMenuItems(listbox);
+    var options = Array.prototype.slice.call(listbox.querySelectorAll('[role="option"]'));
     var result = document.getElementById("combobox-none-result");
     var activeIndex = -1;
 
@@ -1591,7 +1618,7 @@
         e.preventDefault(); highlight(activeIndex - 1);
       } else if (e.key === "Enter") {
         if (activeIndex >= 0) { e.preventDefault(); choose(activeIndex); }
-      } else if (e.key === "Escape") {
+      } else if (e.key === "Escape" || e.key === "Tab") {
         close();
       }
     });
