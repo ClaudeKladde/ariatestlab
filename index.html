@@ -269,6 +269,65 @@
   }
   input[aria-invalid="true"] { border-color: var(--error, #9a1f1f); }
   [role="alert"]:not(:empty) { color: var(--error, #9a1f1f); font-weight: 600; margin-top: 0.4rem; }
+
+  .check-row { display: flex; align-items: center; gap: 0.5rem; margin: 0.5rem 0; }
+  .check-row label { display: inline; margin: 0; font-weight: 400; }
+  input[type="checkbox"], input[type="radio"] { width: 1.2rem; height: 1.2rem; margin: 0; accent-color: var(--accent); }
+  .button-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.6rem 0; }
+
+  /* Toggle button: visible state is shown both by fill and by a check mark, never colour alone. */
+  .toggle-btn { background: transparent; color: var(--fg); border-color: var(--line); }
+  .toggle-btn::before { content: "\2610"; content: "\2610" / ""; display: inline-block; width: 1.3em; }
+  .toggle-btn[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .toggle-btn[aria-pressed="true"]::before { content: "\2611"; content: "\2611" / ""; }
+
+  .switch-row { display: flex; align-items: center; gap: 0.8rem; margin: 0.5rem 0; }
+  .switch-row .field-label { font-weight: 600; }
+  .switch-btn {
+    display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.6rem;
+    background: transparent; color: var(--fg); border: 2px solid var(--line);
+  }
+  .switch-track {
+    position: relative; display: inline-block; width: 2.6rem; height: 1.4rem;
+    border-radius: 999px; background: var(--line); transition: background 0.15s ease;
+  }
+  .switch-thumb {
+    position: absolute; top: 0.2rem; left: 0.2rem; width: 1rem; height: 1rem;
+    border-radius: 50%; background: var(--bg); transition: left 0.15s ease;
+  }
+  .switch-btn[aria-checked="true"] .switch-track { background: var(--accent); }
+  .switch-btn[aria-checked="true"] .switch-thumb { left: 1.4rem; }
+  .switch-state { min-width: 1.8rem; text-align: left; }
+
+  [role="toolbar"], .toolbar-plain {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; padding: 0.4rem;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--field-bg); max-width: 32rem;
+  }
+  [role="toolbar"] button, .toolbar-plain button { padding: 0.35rem 0.8rem; }
+  [role="separator"] { width: 2px; align-self: stretch; background: var(--line); margin: 0 0.3rem; }
+  .format-preview { margin: 0.6rem 0; padding: 0.6rem 0.8rem; border: 1px dashed var(--line); border-radius: 6px; max-width: 32rem; }
+
+  button:disabled, button[aria-disabled="true"] {
+    background: var(--field-bg); color: var(--muted); border-color: var(--line); border-style: dashed; cursor: not-allowed;
+  }
+
+  .live-box {
+    min-height: 2.6rem; margin: 0.5rem 0; padding: 0.5rem 0.8rem; max-width: 32rem;
+    border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
+  }
+  .live-box-label { font-size: 0.9rem; color: var(--muted); margin: 0.8rem 0 0; }
+  .live-log { list-style: none; padding-left: 0; margin: 0; }
+  [role="log"] { max-height: 10rem; overflow-y: auto; }
+  .live-log li { padding: 0.15rem 0; }
+  output { display: block; }
+
+  .toast-region { position: fixed; right: 1rem; bottom: 1rem; z-index: 1500; max-width: 20rem; }
+  .toast {
+    margin-top: 0.5rem; padding: 0.8rem 1rem; border-radius: 8px;
+    background: var(--fg); color: var(--bg); box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .toast[hidden], .toast:empty { display: none; }
+  [popover].toast { position: fixed; inset: auto 1rem 1rem auto; margin: 0; border: none; }
 </style>
 </head>
 <body>
@@ -317,6 +376,15 @@
         </ul>
       </li>
       <li>
+        <a href="#grupp-knappar">Knappar &amp; växlar</a>
+        <ul>
+          <li><a href="#toggle-knapp">Toggle-knapp</a></li>
+          <li><a href="#switch">Switch</a></li>
+          <li><a href="#verktygsfalt">Verktygsfält</a></li>
+          <li><a href="#inaktiverad-knapp">disabled vs aria-disabled</a></li>
+        </ul>
+      </li>
+      <li>
         <a href="#grupp-formular">Formulär: etiketter &amp; beskrivningar</a>
         <ul>
           <li><a href="#label-labelledby">Namn: label vs aria-labelledby</a></li>
@@ -324,6 +392,14 @@
           <li><a href="#describedby-hjalptext">Beskrivning: aria-describedby</a></li>
           <li><a href="#namn-och-beskrivning">Namn och beskrivning tillsammans</a></li>
           <li><a href="#felmeddelande-invalid">Felmeddelande med aria-invalid</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#grupp-live">Meddelanden &amp; live-regioner</a>
+        <ul>
+          <li><a href="#live-polite-assertive">polite vs assertive</a></li>
+          <li><a href="#status-alert-log">Status, alert och log</a></li>
+          <li><a href="#toast">Toast-notis</a></li>
         </ul>
       </li>
     </ul>
@@ -839,6 +915,116 @@
       </section>
     </section>
 
+    <section id="grupp-knappar" aria-labelledby="grupp-knappar-h">
+      <h2 id="grupp-knappar-h">Knappar &amp; växlar</h2>
+      <p class="pattern-desc">Knappar som har ett läge (på/av, nedtryckt/inte nedtryckt) och knappar som inte går att använda just nu. Toggle-knapp och switch blandas ofta ihop, men läses upp olika av skärmläsare.</p>
+
+      <section id="toggle-knapp" aria-labelledby="toggle-knapp-h">
+        <h3 id="toggle-knapp-h">Toggle-knapp (aria-pressed)</h3>
+        <p class="pattern-desc">En knapp som växlar mellan nedtryckt och inte nedtryckt. Knappens text ska vara densamma i båda lägena, det är läget som ändras. Om texten byts ut, till exempel från "Lägg till" till "Ta bort", ska aria-pressed inte användas.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Inbyggd kryssruta som jämförelse</h4>
+          <p>HTML saknar en toggle-knapp. Den närmaste inbyggda motsvarigheten är en kryssruta, som läses upp som "kryssad" eller "inte kryssad".</p>
+          <div class="check-row">
+            <input type="checkbox" id="fav-checkbox-html">
+            <label for="fav-checkbox-html">Favoritmarkera Räven</label>
+          </div>
+          <p class="result" id="fav-checkbox-html-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> &lt;button aria-pressed&gt;</h4>
+          <p>Läses upp som "växlingsknapp", "nedtryckt" eller liknande beroende på skärmläsare. Enter och mellanslag växlar läget.</p>
+          <button type="button" class="toggle-btn" id="fav-toggle-aria" aria-pressed="false">Favoritmarkera Räven</button>
+          <p class="result" id="fav-toggle-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="switch" aria-labelledby="switch-h">
+        <h3 id="switch-h">Switch (av/på)</h3>
+        <p class="pattern-desc">En inställning som slås av eller på och gäller direkt, utan att något formulär skickas. Läget visas både med reglagets position och med texten Av/På, inte bara med färg.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> &lt;input type="checkbox" switch&gt;</h4>
+          <p>Attributet switch stöds än så länge bara i Safari 17.4 och senare, där rutan ritas som ett reglage och läses upp som en switch. I andra webbläsare blir det en vanlig kryssruta.</p>
+          <div class="check-row">
+            <input type="checkbox" switch id="notify-switch-html">
+            <label for="notify-switch-html">Aviseringar om nya djur</label>
+          </div>
+          <p class="result" id="notify-switch-html-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="switch" med aria-checked</h4>
+          <p>En knapp med role="switch". Läses upp som "switch, av" eller "switch, på". Enter och mellanslag växlar läget.</p>
+          <div class="switch-row">
+            <span id="notify-switch-aria-label" class="field-label">Aviseringar om nya djur</span>
+            <button type="button" class="switch-btn" id="notify-switch-aria" role="switch" aria-checked="false" aria-labelledby="notify-switch-aria-label">
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+              <span class="switch-state" aria-hidden="true">Av</span>
+            </button>
+          </div>
+          <p class="result" id="notify-switch-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="verktygsfalt" aria-labelledby="verktygsfalt-h">
+        <h3 id="verktygsfalt-h">Verktygsfält (toolbar)</h3>
+        <p class="pattern-desc">En grupp knappar som hör ihop. Med role="toolbar" blir hela gruppen ett enda tabbstopp, och piltangenterna flyttar mellan knapparna. Jämför med samma knappar utan toolbar-roll, där varje knapp är ett eget tabbstopp.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Vanliga knappar utan toolbar-roll</h4>
+          <p>Varje knapp nås med Tab. Formateringen gäller exempeltexten under knapparna.</p>
+          <div class="toolbar-plain" id="toolbar-plain">
+            <button type="button" class="toggle-btn" aria-pressed="false" data-format="bold">Fet</button>
+            <button type="button" class="toggle-btn" aria-pressed="false" data-format="italic">Kursiv</button>
+            <button type="button" class="toggle-btn" aria-pressed="false" data-format="underline">Understruken</button>
+            <button type="button" class="secondary" data-format="clear">Rensa formatering</button>
+          </div>
+          <p class="format-preview" id="toolbar-plain-preview">Räven smyger genom skogsbrynet i skymningen.</p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="toolbar" med roving tabindex</h4>
+          <p>Tab går in i verktygsfältet en gång. Vänster/höger pil flyttar mellan knapparna, Home och End går till första och sista. Tab igen lämnar verktygsfältet.</p>
+          <div role="toolbar" aria-label="Textformatering" aria-controls="toolbar-aria-preview" id="toolbar-aria">
+            <button type="button" class="toggle-btn" aria-pressed="false" data-format="bold" tabindex="0">Fet</button>
+            <button type="button" class="toggle-btn" aria-pressed="false" data-format="italic" tabindex="-1">Kursiv</button>
+            <button type="button" class="toggle-btn" aria-pressed="false" data-format="underline" tabindex="-1">Understruken</button>
+            <div role="separator" aria-orientation="vertical"></div>
+            <button type="button" class="secondary" data-format="clear" tabindex="-1">Rensa formatering</button>
+          </div>
+          <p class="format-preview" id="toolbar-aria-preview">Räven smyger genom skogsbrynet i skymningen.</p>
+        </div>
+      </section>
+
+      <section id="inaktiverad-knapp" aria-labelledby="inaktiverad-knapp-h">
+        <h3 id="inaktiverad-knapp-h">Inaktiverad knapp: disabled jämfört med aria-disabled</h3>
+        <p class="pattern-desc">Båda knapparna nedan är inaktiverade tills kryssrutan är ikryssad. Med disabled hoppar Tab över knappen helt, så en tangentbordsanvändare kanske aldrig märker att den finns. Med aria-disabled går knappen att nå och läses upp som inaktiverad, och den kan dessutom förklara varför.</p>
+
+        <div class="check-row">
+          <input type="checkbox" id="order-ready">
+          <label for="order-ready">Jag har valt minst en rätt</label>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Attributet disabled</h4>
+          <p>Går inte att nå med Tab. I skärmläsarens läsläge hittas knappen fortfarande, men den går inte att fokusera.</p>
+          <button type="button" id="order-btn-html" disabled>Skicka beställning</button>
+          <p class="result" id="order-btn-html-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> aria-disabled="true"</h4>
+          <p>Går att nå med Tab och läses upp som inaktiverad tillsammans med en förklaring via aria-describedby. JavaScript ser till att ett klick inte gör något utom att upprepa förklaringen.</p>
+          <button type="button" id="order-btn-aria" aria-disabled="true" aria-describedby="order-btn-aria-hint">Skicka beställning</button>
+          <p id="order-btn-aria-hint" class="hint-text">Välj minst en rätt innan du skickar beställningen.</p>
+          <p class="result" id="order-btn-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+    </section>
+
     <section id="grupp-formular" aria-labelledby="grupp-formular-h">
       <h2 id="grupp-formular-h">Formulär: etiketter &amp; beskrivningar</h2>
       <p class="pattern-desc">aria-labelledby ger ett element dess tillgängliga namn, precis som &lt;label&gt; gör. aria-describedby ger en extra beskrivning som alltid läses efter namnet, aldrig i stället för det. De blandas ofta ihop, så här jämförs de sida vid sida.</p>
@@ -925,7 +1111,83 @@
         </div>
       </section>
     </section>
+
+    <section id="grupp-live" aria-labelledby="grupp-live-h">
+      <h2 id="grupp-live-h">Meddelanden &amp; live-regioner</h2>
+      <p class="pattern-desc">Live-regioner gör att skärmläsaren läser upp ändringar på sidan utan att fokus flyttas. Regionen måste finnas på sidan, gärna tom, innan innehållet ändras. En region som skapas samtidigt som texten läses ofta inte upp alls.</p>
+
+      <section id="live-polite-assertive" aria-labelledby="live-polite-assertive-h">
+        <h3 id="live-polite-assertive-h">aria-live: polite jämfört med assertive</h3>
+        <p class="pattern-desc">polite väntar tills skärmläsaren har läst klart det den håller på med. assertive avbryter direkt. Knappen "Skicka båda" skickar ett artigt meddelande och sedan ett brådskande direkt efter, så att du kan höra om det brådskande avbryter.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> aria-live="polite" och aria-live="assertive"</h4>
+          <div class="button-row">
+            <button type="button" id="live-polite-btn">Skicka artigt meddelande</button>
+            <button type="button" id="live-assertive-btn">Skicka brådskande meddelande</button>
+            <button type="button" id="live-both-btn" class="secondary">Skicka båda</button>
+          </div>
+          <p class="live-box-label" id="live-polite-label">Region med aria-live="polite":</p>
+          <div class="live-box" id="live-polite-region" aria-live="polite" aria-labelledby="live-polite-label"></div>
+          <p class="live-box-label" id="live-assertive-label">Region med aria-live="assertive":</p>
+          <div class="live-box" id="live-assertive-region" aria-live="assertive" aria-labelledby="live-assertive-label"></div>
+        </div>
+      </section>
+
+      <section id="status-alert-log" aria-labelledby="status-alert-log-h">
+        <h3 id="status-alert-log-h">Status, alert och log</h3>
+        <p class="pattern-desc">Tre roller som redan fungerar som live-regioner, utan att aria-live behöver anges. status är artig och till för lägesbesked. alert är brådskande och till för fel och varningar. log är artig och läser bara upp nya rader som läggs till, inte hela innehållet.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Elementet &lt;output&gt;</h4>
+          <p>&lt;output&gt; har inbyggd roll status och ska därför läsas upp när innehållet ändras. Stödet varierar dock mellan webbläsare och skärmläsare, så jämför med role="status" nedan.</p>
+          <button type="button" id="visitors-btn">Räkna in en besökare</button>
+          <output id="visitors-output" class="live-box" for="visitors-btn"></output>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="status"</h4>
+          <button type="button" id="status-btn">Spara djurlistan</button>
+          <div class="live-box" id="status-region" role="status"></div>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="alert"</h4>
+          <button type="button" id="alert-btn">Simulera fel vid sparande</button>
+          <div class="live-box" id="alert-region" role="alert"></div>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="log"</h4>
+          <p>Varje klick lägger till en ny rad sist i loggen. Bara den nya raden ska läsas upp.</p>
+          <button type="button" id="log-btn">Lägg till händelse i djurloggen</button>
+          <div class="live-box" role="log" aria-label="Djurlogg" tabindex="0"><ul class="live-log" id="log-list"></ul></div>
+        </div>
+      </section>
+
+      <section id="toast" aria-labelledby="toast-h">
+        <h3 id="toast-h">Toast-notis</h3>
+        <p class="pattern-desc">En kort notis som visas i hörnet av skärmen och försvinner av sig själv efter 8 sekunder. Fokus flyttas inte dit. Tänk på att text som försvinner automatiskt kan vara svår att hinna läsa (WCAG 2.2.1), så viktig information ska inte bara finnas i en toast.</p>
+
+        <div class="variant variant-ref">
+          <h4><span class="badge badge-html">HTML</span> popover="manual" utan live-region</h4>
+          <p>Visas visuellt precis som en toast, men är ingen live-region. Den läses därför normalt inte upp alls, vilket är ett vanligt misstag.</p>
+          <button type="button" id="toast-popover-btn">Lägg till Uggla i favoriter (utan live-region)</button>
+          <div popover="manual" id="toast-popover" class="toast">Ugglan lades till i dina favoriter.</div>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Toast i en role="status"-region</h4>
+          <p>Regionen finns hela tiden på sidan, tom. När texten läggs in läses den upp artigt.</p>
+          <button type="button" id="toast-aria-btn">Lägg till Räven i favoriter</button>
+        </div>
+      </section>
+    </section>
   </main>
+</div>
+
+<div class="toast-region" role="status" id="toast-region">
+  <div class="toast" id="toast-aria"></div>
 </div>
 
 <script>
@@ -1761,6 +2023,199 @@
         input.setAttribute("aria-invalid", "true");
         feedback.textContent = "Ange telefonnumret som siffror, till exempel 0701234567.";
       }
+    });
+  })();
+
+  function togglePressed(btn) {
+    var pressed = btn.getAttribute("aria-pressed") !== "true";
+    btn.setAttribute("aria-pressed", pressed ? "true" : "false");
+    return pressed;
+  }
+
+  // --- Toggle button vs native checkbox ---
+  (function () {
+    var checkbox = document.getElementById("fav-checkbox-html");
+    var checkboxResult = document.getElementById("fav-checkbox-html-result");
+    checkbox.addEventListener("change", function () {
+      checkboxResult.textContent = checkbox.checked ? "Räven är favoritmarkerad." : "Räven är inte längre favoritmarkerad.";
+    });
+
+    var toggle = document.getElementById("fav-toggle-aria");
+    var toggleResult = document.getElementById("fav-toggle-aria-result");
+    toggle.addEventListener("click", function () {
+      toggleResult.textContent = togglePressed(toggle) ? "Räven är favoritmarkerad." : "Räven är inte längre favoritmarkerad.";
+    });
+  })();
+
+  // --- Switch ---
+  (function () {
+    var htmlSwitch = document.getElementById("notify-switch-html");
+    var htmlResult = document.getElementById("notify-switch-html-result");
+    htmlSwitch.addEventListener("change", function () {
+      htmlResult.textContent = htmlSwitch.checked ? "Aviseringar är på." : "Aviseringar är av.";
+    });
+
+    var ariaSwitch = document.getElementById("notify-switch-aria");
+    var stateText = ariaSwitch.querySelector(".switch-state");
+    var ariaResult = document.getElementById("notify-switch-aria-result");
+    ariaSwitch.addEventListener("click", function () {
+      var on = ariaSwitch.getAttribute("aria-checked") !== "true";
+      ariaSwitch.setAttribute("aria-checked", on ? "true" : "false");
+      stateText.textContent = on ? "På" : "Av";
+      ariaResult.textContent = on ? "Aviseringar är på." : "Aviseringar är av.";
+    });
+  })();
+
+  // --- Toolbar: plain buttons vs role="toolbar" with roving tabindex ---
+  function setupFormatButtons(container, preview) {
+    var buttons = Array.prototype.slice.call(container.querySelectorAll("button"));
+    var styles = { bold: ["fontWeight", "700"], italic: ["fontStyle", "italic"], underline: ["textDecoration", "underline"] };
+    buttons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var format = btn.getAttribute("data-format");
+        if (format === "clear") {
+          buttons.forEach(function (b) { if (b.hasAttribute("aria-pressed")) { b.setAttribute("aria-pressed", "false"); } });
+          preview.removeAttribute("style");
+          return;
+        }
+        var on = togglePressed(btn);
+        preview.style[styles[format][0]] = on ? styles[format][1] : "";
+      });
+    });
+    return buttons;
+  }
+  (function () {
+    setupFormatButtons(document.getElementById("toolbar-plain"), document.getElementById("toolbar-plain-preview"));
+
+    var toolbar = document.getElementById("toolbar-aria");
+    var buttons = setupFormatButtons(toolbar, document.getElementById("toolbar-aria-preview"));
+    function focusButton(index) {
+      var i = ((index % buttons.length) + buttons.length) % buttons.length;
+      buttons.forEach(function (b, j) { b.setAttribute("tabindex", j === i ? "0" : "-1"); });
+      buttons[i].focus();
+    }
+    toolbar.addEventListener("keydown", function (e) {
+      var current = buttons.indexOf(document.activeElement);
+      if (current === -1) { return; }
+      if (e.key === "ArrowRight") { e.preventDefault(); focusButton(current + 1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); focusButton(current - 1); }
+      else if (e.key === "Home") { e.preventDefault(); focusButton(0); }
+      else if (e.key === "End") { e.preventDefault(); focusButton(buttons.length - 1); }
+    });
+    buttons.forEach(function (b, i) {
+      b.addEventListener("click", function () { focusButton(i); });
+    });
+  })();
+
+  // --- disabled vs aria-disabled ---
+  (function () {
+    var ready = document.getElementById("order-ready");
+    var htmlBtn = document.getElementById("order-btn-html");
+    var htmlResult = document.getElementById("order-btn-html-result");
+    var ariaBtn = document.getElementById("order-btn-aria");
+    var ariaHint = document.getElementById("order-btn-aria-hint");
+    var ariaResult = document.getElementById("order-btn-aria-result");
+
+    ready.addEventListener("change", function () {
+      htmlBtn.disabled = !ready.checked;
+      if (ready.checked) {
+        ariaBtn.removeAttribute("aria-disabled");
+        ariaBtn.removeAttribute("aria-describedby");
+        ariaHint.hidden = true;
+      } else {
+        ariaBtn.setAttribute("aria-disabled", "true");
+        ariaBtn.setAttribute("aria-describedby", "order-btn-aria-hint");
+        ariaHint.hidden = false;
+      }
+      htmlResult.textContent = "";
+      ariaResult.textContent = "";
+    });
+    htmlBtn.addEventListener("click", function () {
+      htmlResult.textContent = "Beställningen skickades.";
+    });
+    ariaBtn.addEventListener("click", function () {
+      ariaResult.textContent = ariaBtn.getAttribute("aria-disabled") === "true"
+        ? "Knappen är inaktiverad. Välj minst en rätt innan du skickar beställningen."
+        : "Beställningen skickades.";
+    });
+  })();
+
+  // --- Live regions: polite vs assertive ---
+  (function () {
+    var polite = document.getElementById("live-polite-region");
+    var assertive = document.getElementById("live-assertive-region");
+    var count = 0;
+    // Clearing first and writing on the next tick makes repeated identical messages announce again.
+    function announce(region, text) {
+      region.textContent = "";
+      setTimeout(function () { region.textContent = text; }, 50);
+    }
+    function politeMsg() { count++; announce(polite, "Artigt meddelande " + count + ": Utfodringen av lodjuren börjar om en kvart."); }
+    function assertiveMsg() { count++; announce(assertive, "Brådskande meddelande " + count + ": Ugglan har rymt ur fågelhuset!"); }
+
+    document.getElementById("live-polite-btn").addEventListener("click", politeMsg);
+    document.getElementById("live-assertive-btn").addEventListener("click", assertiveMsg);
+    document.getElementById("live-both-btn").addEventListener("click", function () {
+      politeMsg();
+      setTimeout(assertiveMsg, 300);
+    });
+  })();
+
+  // --- Live regions: output, status, alert, log ---
+  (function () {
+    var visitors = 0;
+    var output = document.getElementById("visitors-output");
+    document.getElementById("visitors-btn").addEventListener("click", function () {
+      visitors++;
+      output.textContent = "Antal besökare i dag: " + visitors;
+    });
+
+    var saves = 0;
+    var status = document.getElementById("status-region");
+    document.getElementById("status-btn").addEventListener("click", function () {
+      saves++;
+      status.textContent = "Djurlistan sparades (" + saves + ").";
+    });
+
+    var errors = 0;
+    var alertRegion = document.getElementById("alert-region");
+    document.getElementById("alert-btn").addEventListener("click", function () {
+      errors++;
+      alertRegion.textContent = "Fel " + errors + ": Djurlistan kunde inte sparas. Försök igen.";
+    });
+
+    var EVENTS = ["Räven åt frukost", "Ugglan vaknade", "Igelkotten rullade ihop sig", "Lodjuret klättrade upp på klippan", "Räven gick och lade sig"];
+    var logIndex = 0;
+    var logList = document.getElementById("log-list");
+    document.getElementById("log-btn").addEventListener("click", function () {
+      var now = new Date();
+      var time = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0") + ":" + String(now.getSeconds()).padStart(2, "0");
+      var li = document.createElement("li");
+      li.textContent = time + " " + EVENTS[logIndex % EVENTS.length];
+      logIndex++;
+      logList.appendChild(li);
+      logList.parentNode.scrollTop = logList.parentNode.scrollHeight;
+    });
+  })();
+
+  // --- Toast ---
+  (function () {
+    var popover = document.getElementById("toast-popover");
+    var popoverTimer = null;
+    document.getElementById("toast-popover-btn").addEventListener("click", function () {
+      if (typeof popover.showPopover !== "function") { return; }
+      if (!popover.matches(":popover-open")) { popover.showPopover(); }
+      clearTimeout(popoverTimer);
+      popoverTimer = setTimeout(function () { popover.hidePopover(); }, 8000);
+    });
+
+    var toast = document.getElementById("toast-aria");
+    var toastTimer = null;
+    document.getElementById("toast-aria-btn").addEventListener("click", function () {
+      toast.textContent = "";
+      clearTimeout(toastTimer);
+      setTimeout(function () { toast.textContent = "Räven lades till i dina favoriter."; }, 50);
+      toastTimer = setTimeout(function () { toast.textContent = ""; }, 8000);
     });
   })();
 })();
