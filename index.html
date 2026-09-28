@@ -376,6 +376,60 @@
   .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
   .bar-value { font-weight: 600; min-width: 7rem; }
   progress, meter { width: 16rem; max-width: 60vw; height: 1.2rem; }
+
+  .site-nav-list {
+    display: flex; flex-wrap: wrap; gap: 0.3rem; list-style: none; margin: 0.5rem 0; padding: 0.4rem;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--field-bg);
+  }
+  .site-nav-list > li { position: relative; margin: 0; }
+  .site-nav-list > li > a, .site-nav-list > li > button, .site-nav details > summary {
+    display: inline-block; padding: 0.5rem 0.9rem; border: none; border-radius: 5px;
+    background: none; color: var(--fg); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+  }
+  .site-nav-list > li > button::after, .site-nav details > summary::after {
+    content: "\25BE"; content: "\25BE" / ""; display: inline-block; margin-left: 0.4rem; transition: transform 0.15s ease;
+  }
+  .site-nav details > summary::before { content: none; }
+  .site-nav-list > li > button[aria-expanded="true"]::after, .site-nav details[open] > summary::after { transform: rotate(180deg); }
+  .site-nav-list > li > button[aria-expanded="true"], .site-nav details[open] > summary { background: var(--accent); color: var(--bg); }
+  .site-nav details { border: none; margin: 0; max-width: none; }
+  .site-nav details > summary { background: none; }
+  .site-subnav {
+    position: absolute; top: 100%; left: 0; z-index: 800; min-width: 12rem; margin: 0.3rem 0 0; padding: 0.3rem;
+    list-style: none; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  }
+  .site-nav details > .site-subnav { margin: 0.3rem 0 0; padding: 0.3rem; }
+  .site-subnav[hidden] { display: none; }
+  .site-subnav a { display: block; padding: 0.45rem 0.8rem; border-radius: 4px; color: var(--fg); text-decoration: none; }
+  .site-nav a:hover { text-decoration: underline; }
+  /* Current page: thick underline and a marker, not colour alone. */
+  .site-nav a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 0.3em; }
+  .site-nav a[aria-current="page"]::before { content: "\25CF"; content: "\25CF" / ""; margin-right: 0.4rem; font-size: 0.7em; vertical-align: 0.15em; }
+
+  .tree, .tree [role="group"] { list-style: none; margin: 0; padding-left: 0; }
+  .tree { max-width: 24rem; padding: 0.4rem; border: 1px solid var(--line); border-radius: 8px; }
+  .tree [role="group"] { padding-left: 1.4rem; }
+  .tree [role="group"][hidden] { display: none; }
+  .tree [role="treeitem"] { margin: 0.1rem 0; }
+  .tree [role="treeitem"]:focus, .tree [role="treeitem"]:focus-visible { outline: none; }
+  .tree-label { display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; }
+  .tree [role="treeitem"]:focus > .tree-label { outline: 3px solid var(--focus); outline-offset: 1px; }
+  .tree-label::before { content: ""; display: inline-block; width: 1.2em; }
+  .tree [aria-expanded] > .tree-label::before { content: "\25B8"; content: "\25B8" / ""; transition: transform 0.15s ease; text-align: center; }
+  .tree [aria-expanded="true"] > .tree-label::before { transform: rotate(90deg); }
+  .tree [aria-selected="true"] > .tree-label { background: var(--accent); color: var(--bg); font-weight: 700; }
+  .tree [aria-selected="true"] > .tree-label::after { content: "\2713"; content: "\2713" / ""; margin-left: 0.5rem; }
+
+  .sortable th { padding: 0; }
+  .sortable th button {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; width: 100%;
+    padding: 0.5rem 0.8rem; border: none; border-radius: 0; background: none; color: var(--fg);
+    font: inherit; font-weight: 700; text-align: left;
+  }
+  .sortable th button:focus-visible { outline-offset: -3px; }
+  .sort-icon { color: var(--muted); }
+  .sortable th[aria-sort] .sort-icon { color: var(--fg); }
 </style>
 </head>
 <body>
@@ -405,6 +459,13 @@
         </ul>
       </li>
       <li>
+        <a href="#grupp-navigation">Navigation &amp; hierarki</a>
+        <ul>
+          <li><a href="#disclosure-navigation">Navigationsmeny med disclosure</a></li>
+          <li><a href="#tradvy">Trädvy</a></li>
+        </ul>
+      </li>
+      <li>
         <a href="#grupp-listor">Listor &amp; val</a>
         <ul>
           <li><a href="#listbox-single">Listbox – enkelval</a></li>
@@ -413,6 +474,7 @@
           <li><a href="#combobox-editable">Combobox – redigerbar</a></li>
           <li><a href="#combobox-none">Combobox – utan filtrering</a></li>
           <li><a href="#grid-tabell">Grid &amp; tabell</a></li>
+          <li><a href="#sorterbar-tabell">Sorterbar tabell</a></li>
         </ul>
       </li>
       <li>
@@ -661,9 +723,119 @@
       </section>
     </section>
 
+    <section id="grupp-navigation" aria-labelledby="grupp-navigation-h">
+      <h2 id="grupp-navigation-h">Navigation &amp; hierarki</h2>
+      <p class="pattern-desc">Webbplatsnavigering och trädstrukturer. En vanlig navigeringsmeny på en webbplats ska inte byggas med role="menu" som i gruppen Menyer ovan. role="menu" är till för programliknande menyer med åtgärder, och gör att skärmläsare byter läge och förväntar sig piltangenter. Webbplatsnavigering är vanliga länkar som nås med Tab.</p>
+
+      <section id="disclosure-navigation" aria-labelledby="disclosure-navigation-h">
+        <h3 id="disclosure-navigation-h">Navigationsmeny med disclosure och aria-current</h3>
+        <p class="pattern-desc">Undermenyerna öppnas med vanliga knappar som visar och döljer en lista med länkar. Sidan man befinner sig på markeras med aria-current="page", som läses upp som "aktuell sida". Länkarna leder inte till riktiga sidor, de flyttar bara markeringen.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> &lt;details&gt; med attributet name</h4>
+          <p>Ingen JavaScript behövs för att öppna och stänga. Attributet name gör att bara en undermeny kan vara öppen åt gången. Kända begränsningar: Escape och klick utanför stänger inte undermenyn.</p>
+          <nav aria-label="Djurparkens webbplats, variant med details" class="site-nav" id="site-nav-html">
+            <ul class="site-nav-list">
+              <li><a href="#disclosure-navigation" aria-current="page">Start</a></li>
+              <li>
+                <details name="site-nav-html">
+                  <summary>Djur</summary>
+                  <ul class="site-subnav">
+                    <li><a href="#disclosure-navigation">Rovdjur</a></li>
+                    <li><a href="#disclosure-navigation">Fåglar</a></li>
+                    <li><a href="#disclosure-navigation">Smådjur</a></li>
+                  </ul>
+                </details>
+              </li>
+              <li>
+                <details name="site-nav-html">
+                  <summary>Besök</summary>
+                  <ul class="site-subnav">
+                    <li><a href="#disclosure-navigation">Öppettider</a></li>
+                    <li><a href="#disclosure-navigation">Priser</a></li>
+                    <li><a href="#disclosure-navigation">Hitta hit</a></li>
+                  </ul>
+                </details>
+              </li>
+              <li><a href="#disclosure-navigation">Kontakt</a></li>
+            </ul>
+          </nav>
+          <p class="result" id="site-nav-html-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> Knappar med aria-expanded och aria-controls</h4>
+          <p>Tab går mellan knappar och länkar. Escape stänger en öppen undermeny och flyttar fokus till dess knapp. Undermenyn stängs också när fokus lämnar navigeringen eller när du klickar utanför.</p>
+          <nav aria-label="Djurparkens webbplats, variant med knappar" class="site-nav" id="site-nav-aria">
+            <ul class="site-nav-list">
+              <li><a href="#disclosure-navigation" aria-current="page">Start</a></li>
+              <li>
+                <button type="button" aria-expanded="false" aria-controls="site-nav-aria-djur">Djur</button>
+                <ul class="site-subnav" id="site-nav-aria-djur" hidden>
+                  <li><a href="#disclosure-navigation">Rovdjur</a></li>
+                  <li><a href="#disclosure-navigation">Fåglar</a></li>
+                  <li><a href="#disclosure-navigation">Smådjur</a></li>
+                </ul>
+              </li>
+              <li>
+                <button type="button" aria-expanded="false" aria-controls="site-nav-aria-besok">Besök</button>
+                <ul class="site-subnav" id="site-nav-aria-besok" hidden>
+                  <li><a href="#disclosure-navigation">Öppettider</a></li>
+                  <li><a href="#disclosure-navigation">Priser</a></li>
+                  <li><a href="#disclosure-navigation">Hitta hit</a></li>
+                </ul>
+              </li>
+              <li><a href="#disclosure-navigation">Kontakt</a></li>
+            </ul>
+          </nav>
+          <p class="result" id="site-nav-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="tradvy" aria-labelledby="tradvy-h">
+        <h3 id="tradvy-h">Trädvy (tree)</h3>
+        <p class="pattern-desc">En hierarkisk lista där grenar kan fällas ut och ihop, som mappar i en filhanterare. Det finns ingen HTML-motsvarighet. Närmast kommer nästlade listor eller nästlade &lt;details&gt;, men de ger inte trädets tangentbordsnavigering eller upplästa nivåer.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="tree" med role="treeitem" och role="group"</h4>
+          <p>Hela trädet är ett tabbstopp. Upp och ner pil flyttar mellan synliga rader. Höger pil fäller ut en gren, eller går till dess första rad om den redan är utfälld. Vänster pil fäller ihop en gren, eller går till överordnad gren. Home och End går till första och sista synliga raden. Enter eller mellanslag väljer en rad. Skriv en bokstav för att hoppa till nästa rad som börjar på den.</p>
+          <ul role="tree" aria-label="Djurparkens områden" class="tree" id="area-tree">
+            <li role="treeitem" aria-expanded="false" aria-labelledby="tree-skog" tabindex="0">
+              <span class="tree-label" id="tree-skog">Skogsområdet</span>
+              <ul role="group" hidden>
+                <li role="treeitem" tabindex="-1"><span class="tree-label">Räv</span></li>
+                <li role="treeitem" tabindex="-1"><span class="tree-label">Lodjur</span></li>
+              </ul>
+            </li>
+            <li role="treeitem" aria-expanded="false" aria-labelledby="tree-fagel" tabindex="-1">
+              <span class="tree-label" id="tree-fagel">Fågelhuset</span>
+              <ul role="group" hidden>
+                <li role="treeitem" tabindex="-1"><span class="tree-label">Uggla</span></li>
+                <li role="treeitem" tabindex="-1"><span class="tree-label">Hök</span></li>
+              </ul>
+            </li>
+            <li role="treeitem" aria-expanded="false" aria-labelledby="tree-smadjur" tabindex="-1">
+              <span class="tree-label" id="tree-smadjur">Smådjurshörnan</span>
+              <ul role="group" hidden>
+                <li role="treeitem" tabindex="-1"><span class="tree-label">Igelkott</span></li>
+                <li role="treeitem" aria-expanded="false" aria-labelledby="tree-gnagare" tabindex="-1">
+                  <span class="tree-label" id="tree-gnagare">Gnagare</span>
+                  <ul role="group" hidden>
+                    <li role="treeitem" tabindex="-1"><span class="tree-label">Ekorre</span></li>
+                    <li role="treeitem" tabindex="-1"><span class="tree-label">Hamster</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+          <p class="result" id="area-tree-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+    </section>
+
     <section id="grupp-listor" aria-labelledby="grupp-listor-h">
       <h2 id="grupp-listor-h">Listor &amp; val</h2>
-      <p class="pattern-desc">Den här omgången täcker listbox och två combobox-varianter. En tredje combobox-variant (redigerbar utan filtrering) och grid/tabell läggs till senare för att hålla omgångarna hanterbara.</p>
+      <p class="pattern-desc">Listor där ett eller flera alternativ väljs, comboboxar som kombinerar textfält och lista, samt tabeller och rutnät.</p>
 
       <section id="listbox-single" aria-labelledby="listbox-single-h">
         <h3 id="listbox-single-h">Listbox – enkelval</h3>
@@ -879,6 +1051,34 @@
             </div>
           </div>
           <p class="result" id="grid-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="sorterbar-tabell" aria-labelledby="sorterbar-tabell-h">
+        <h3 id="sorterbar-tabell-h">Sorterbar tabell (aria-sort)</h3>
+        <p class="pattern-desc">En vanlig datatabell där kolumnrubrikerna är knappar som sorterar tabellen. aria-sort anges bara på den kolumn som tabellen just nu är sorterad efter, och läses upp som till exempel "sorterad stigande" när du hamnar på rubriken. Eftersom ändringen inte alltid läses upp direkt när du klickar, bekräftas sorteringen också med ett statusmeddelande.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> &lt;table&gt; med aria-sort och knappar i rubrikerna</h4>
+          <p>Första klicket på en kolumn sorterar stigande, nästa klick fallande.</p>
+          <table class="sortable" id="sort-table">
+            <caption>Djurparkens djur. Kolumnrubrikerna är knappar som sorterar tabellen.</caption>
+            <thead>
+              <tr>
+                <th scope="col" aria-sort="ascending"><button type="button" data-type="text">Djur<span class="sort-icon" aria-hidden="true">&#9650;</span></button></th>
+                <th scope="col"><button type="button" data-type="number">Ålder (år)<span class="sort-icon" aria-hidden="true">&#8597;</span></button></th>
+                <th scope="col"><button type="button" data-type="text">Hemvist<span class="sort-icon" aria-hidden="true">&#8597;</span></button></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Ekorre</td><td>1</td><td>Ekdungen</td></tr>
+              <tr><td>Igelkott</td><td>2</td><td>Buskarna</td></tr>
+              <tr><td>Lodjur</td><td>5</td><td>Klippavdelningen</td></tr>
+              <tr><td>Räv</td><td>3</td><td>Skogsbrynet</td></tr>
+              <tr><td>Uggla</td><td>7</td><td>Trädkojan</td></tr>
+            </tbody>
+          </table>
+          <p class="result" id="sort-table-result" role="status" aria-live="polite"></p>
         </div>
       </section>
     </section>
@@ -2634,6 +2834,180 @@
       ariaMeter.setAttribute("aria-valuetext", level.v + " procent, " + level.label);
       ariaMeter.firstElementChild.style.width = level.v + "%";
       ariaMeterValue.textContent = level.v + " % (" + level.label + ")";
+    });
+  })();
+
+  // --- Site navigation: aria-current handling shared by both variants ---
+  function setupCurrentPage(nav, result, onNavigate) {
+    var links = Array.prototype.slice.call(nav.querySelectorAll("a"));
+    links.forEach(function (link) {
+      link.addEventListener("click", function (e) {
+        e.preventDefault();
+        links.forEach(function (l) { l.removeAttribute("aria-current"); });
+        link.setAttribute("aria-current", "page");
+        result.textContent = "Du är nu på sidan: " + link.textContent;
+        if (onNavigate) { onNavigate(link); }
+      });
+    });
+  }
+
+  // --- Site navigation: <details> variant ---
+  (function () {
+    var nav = document.getElementById("site-nav-html");
+    setupCurrentPage(nav, document.getElementById("site-nav-html-result"), function (link) {
+      var details = link.closest("details");
+      if (details) {
+        details.open = false;
+        details.querySelector("summary").focus();
+      }
+    });
+  })();
+
+  // --- Site navigation: disclosure button variant ---
+  (function () {
+    var nav = document.getElementById("site-nav-aria");
+    var buttons = Array.prototype.slice.call(nav.querySelectorAll("button[aria-controls]"));
+    function setOpen(btn, open) {
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      document.getElementById(btn.getAttribute("aria-controls")).hidden = !open;
+    }
+    function closeAll() { buttons.forEach(function (b) { setOpen(b, false); }); }
+
+    buttons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var open = btn.getAttribute("aria-expanded") !== "true";
+        closeAll();
+        setOpen(btn, open);
+      });
+    });
+    nav.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") { return; }
+      var openBtn = buttons.filter(function (b) { return b.getAttribute("aria-expanded") === "true"; })[0];
+      if (openBtn) { e.preventDefault(); setOpen(openBtn, false); openBtn.focus(); }
+    });
+    nav.addEventListener("focusout", function (e) {
+      if (e.relatedTarget && !nav.contains(e.relatedTarget)) { closeAll(); }
+    });
+    document.addEventListener("click", function (e) {
+      if (!nav.contains(e.target)) { closeAll(); }
+    });
+    setupCurrentPage(nav, document.getElementById("site-nav-aria-result"), function (link) {
+      var list = link.closest(".site-subnav");
+      if (list) {
+        var btn = nav.querySelector('[aria-controls="' + list.id + '"]');
+        setOpen(btn, false);
+        btn.focus();
+      }
+    });
+  })();
+
+  // --- Tree view ---
+  (function () {
+    var tree = document.getElementById("area-tree");
+    var result = document.getElementById("area-tree-result");
+    var allItems = Array.prototype.slice.call(tree.querySelectorAll('[role="treeitem"]'));
+
+    function label(item) { return item.querySelector(".tree-label").textContent; }
+    function isParent(item) { return item.hasAttribute("aria-expanded"); }
+    function isExpanded(item) { return item.getAttribute("aria-expanded") === "true"; }
+    function visibleItems() {
+      return allItems.filter(function (item) {
+        var group = item.parentElement.closest('[role="group"]');
+        while (group) {
+          if (group.hidden) { return false; }
+          group = group.parentElement.closest('[role="group"]');
+        }
+        return true;
+      });
+    }
+    function focusItem(item) {
+      allItems.forEach(function (i) { i.setAttribute("tabindex", i === item ? "0" : "-1"); });
+      item.focus();
+    }
+    function setExpanded(item, expanded) {
+      item.setAttribute("aria-expanded", expanded ? "true" : "false");
+      item.querySelector('[role="group"]').hidden = !expanded;
+    }
+    function select(item) {
+      allItems.forEach(function (i) { i.removeAttribute("aria-selected"); });
+      item.setAttribute("aria-selected", "true");
+      result.textContent = "Valt område: " + label(item);
+    }
+
+    tree.addEventListener("keydown", function (e) {
+      var item = document.activeElement;
+      if (!item || item.getAttribute("role") !== "treeitem") { return; }
+      var visible = visibleItems();
+      var index = visible.indexOf(item);
+      var handled = true;
+
+      if (e.key === "ArrowDown") { if (index < visible.length - 1) { focusItem(visible[index + 1]); } }
+      else if (e.key === "ArrowUp") { if (index > 0) { focusItem(visible[index - 1]); } }
+      else if (e.key === "ArrowRight") {
+        if (isParent(item)) {
+          if (!isExpanded(item)) { setExpanded(item, true); }
+          else { focusItem(item.querySelector('[role="treeitem"]')); }
+        }
+      }
+      else if (e.key === "ArrowLeft") {
+        if (isParent(item) && isExpanded(item)) { setExpanded(item, false); }
+        else {
+          var parent = item.parentElement.closest('[role="treeitem"]');
+          if (parent) { focusItem(parent); }
+        }
+      }
+      else if (e.key === "Home") { focusItem(visible[0]); }
+      else if (e.key === "End") { focusItem(visible[visible.length - 1]); }
+      else if (e.key === "Enter" || e.key === " ") { select(item); }
+      else if (e.key.length === 1 && /\S/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        var ch = e.key.toLowerCase();
+        var ordered = visible.slice(index + 1).concat(visible.slice(0, index + 1));
+        var match = ordered.filter(function (i) { return label(i).toLowerCase().indexOf(ch) === 0; })[0];
+        if (match) { focusItem(match); }
+      }
+      else { handled = false; }
+
+      if (handled) { e.preventDefault(); e.stopPropagation(); }
+    });
+
+    tree.addEventListener("click", function (e) {
+      var labelEl = e.target.closest(".tree-label");
+      if (!labelEl) { return; }
+      var item = labelEl.parentElement;
+      if (isParent(item)) { setExpanded(item, !isExpanded(item)); }
+      select(item);
+      focusItem(item);
+    });
+  })();
+
+  // --- Sortable table ---
+  (function () {
+    var table = document.getElementById("sort-table");
+    var tbody = table.tBodies[0];
+    var headers = Array.prototype.slice.call(table.tHead.rows[0].cells);
+    var result = document.getElementById("sort-table-result");
+
+    headers.forEach(function (th, col) {
+      var btn = th.querySelector("button");
+      btn.addEventListener("click", function () {
+        var direction = th.getAttribute("aria-sort") === "ascending" ? "descending" : "ascending";
+        var numeric = btn.getAttribute("data-type") === "number";
+        var rows = Array.prototype.slice.call(tbody.rows);
+        rows.sort(function (a, b) {
+          var x = a.cells[col].textContent, y = b.cells[col].textContent;
+          var cmp = numeric ? Number(x) - Number(y) : x.localeCompare(y, "sv");
+          return direction === "ascending" ? cmp : -cmp;
+        });
+        rows.forEach(function (r) { tbody.appendChild(r); });
+
+        headers.forEach(function (h) {
+          h.removeAttribute("aria-sort");
+          h.querySelector(".sort-icon").textContent = "↕";
+        });
+        th.setAttribute("aria-sort", direction);
+        th.querySelector(".sort-icon").textContent = direction === "ascending" ? "▲" : "▼";
+        result.textContent = "Tabellen är sorterad efter " + btn.firstChild.textContent + ", " + (direction === "ascending" ? "stigande" : "fallande") + ".";
+      });
     });
   })();
 })();
