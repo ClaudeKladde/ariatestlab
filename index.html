@@ -328,6 +328,54 @@
   }
   .toast[hidden], .toast:empty { display: none; }
   [popover].toast { position: fixed; inset: auto 1rem 1rem auto; margin: 0; border: none; }
+
+  fieldset { border: 1px solid var(--line); border-radius: 6px; padding: 0.6rem 1rem 0.8rem; margin: 0.6rem 0; max-width: 24rem; }
+  legend { font-weight: 600; padding: 0 0.3rem; }
+  .check-children { list-style: none; margin: 0; padding-left: 1.6rem; }
+
+  /* Custom radio and checkbox indicators, drawn with borders so they survive forced colours. */
+  .aria-radio, .aria-checkbox {
+    display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0; padding: 0.2rem 0.4rem;
+    width: fit-content; border-radius: 4px; cursor: pointer;
+  }
+  .aria-radio::before, .aria-checkbox::before {
+    content: ""; flex-shrink: 0; width: 1.1rem; height: 1.1rem; box-sizing: border-box;
+    border: 2px solid var(--fg); display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; line-height: 1;
+  }
+  .aria-radio::before { border-radius: 50%; }
+  .aria-radio[aria-checked="true"]::before { border-width: 0.35rem; }
+  .aria-checkbox::before { border-radius: 3px; }
+  .aria-checkbox[aria-checked="true"]::before { content: "\2713"; content: "\2713" / ""; }
+  .aria-checkbox[aria-checked="mixed"]::before { content: "\2013"; content: "\2013" / ""; }
+  .aria-radiogroup, .aria-checkgroup { margin: 0.4rem 0; }
+
+  .slider-wrap { display: flex; align-items: center; gap: 1rem; margin: 0.8rem 0; }
+  .slider-rail {
+    position: relative; width: 16rem; max-width: 60vw; height: 0.5rem;
+    border-radius: 999px; background: var(--line); cursor: pointer; touch-action: none;
+  }
+  .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--accent); }
+  .slider-thumb {
+    position: absolute; top: 50%; width: 1.5rem; height: 1.5rem; transform: translate(-50%, -50%);
+    border-radius: 50%; background: var(--bg); border: 3px solid var(--accent); cursor: grab;
+  }
+  .slider-thumb:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .slider-value { font-weight: 600; min-width: 4rem; }
+  input[type="range"] { width: 16rem; max-width: 60vw; accent-color: var(--accent); }
+
+  .spin-wrap { display: inline-flex; align-items: stretch; gap: 0.3rem; }
+  .spin-wrap button { min-width: 2.6rem; padding: 0.3rem 0.6rem; }
+  .spin-input, input[type="number"] {
+    font: inherit; width: 5rem; padding: 0.4rem 0.5rem; text-align: center;
+    border: 2px solid var(--line); border-radius: 5px; background: var(--bg); color: var(--fg);
+  }
+
+  .bar-row { display: flex; align-items: center; gap: 1rem; margin: 0.3rem 0 0.6rem; }
+  .bar { position: relative; width: 16rem; max-width: 60vw; height: 1.1rem; border: 2px solid var(--fg); border-radius: 4px; overflow: hidden; }
+  .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+  .bar-value { font-weight: 600; min-width: 7rem; }
+  progress, meter { width: 16rem; max-width: 60vw; height: 1.2rem; }
 </style>
 </head>
 <body>
@@ -382,6 +430,16 @@
           <li><a href="#switch">Switch</a></li>
           <li><a href="#verktygsfalt">Verktygsfält</a></li>
           <li><a href="#inaktiverad-knapp">disabled vs aria-disabled</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#grupp-varden">Val &amp; värden</a>
+        <ul>
+          <li><a href="#radioknappar">Radioknappar</a></li>
+          <li><a href="#kryssruta-tre-lagen">Kryssruta med tre lägen</a></li>
+          <li><a href="#slider">Slider</a></li>
+          <li><a href="#spinbutton">Spinbutton</a></li>
+          <li><a href="#forlopp-matare">Förlopp och mätare</a></li>
         </ul>
       </li>
       <li>
@@ -1021,6 +1079,164 @@
           <button type="button" id="order-btn-aria" aria-disabled="true" aria-describedby="order-btn-aria-hint">Skicka beställning</button>
           <p id="order-btn-aria-hint" class="hint-text">Välj minst en rätt innan du skickar beställningen.</p>
           <p class="result" id="order-btn-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+    </section>
+
+    <section id="grupp-varden" aria-labelledby="grupp-varden-h">
+      <h2 id="grupp-varden-h">Val &amp; värden</h2>
+      <p class="pattern-desc">Kontroller för att välja bland alternativ eller ange ett värde inom ett intervall. Här har HTML oftast bra inbyggda element, och de egenbyggda varianterna visar hur mycket som behöver återskapas för hand.</p>
+
+      <section id="radioknappar" aria-labelledby="radioknappar-h">
+        <h3 id="radioknappar-h">Radioknappar</h3>
+        <p class="pattern-desc">Ett val bland flera. Tab går in i gruppen en gång och hamnar på det valda alternativet, eller det första om inget är valt. Piltangenterna flyttar och väljer samtidigt. Det skiljer sig från kryssrutor, där varje ruta är ett eget tabbstopp.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> &lt;fieldset&gt; med &lt;input type="radio"&gt;</h4>
+          <fieldset>
+            <legend>Portionsstorlek</legend>
+            <div class="check-row"><input type="radio" name="portion-html" id="portion-html-liten" value="Liten"><label for="portion-html-liten">Liten</label></div>
+            <div class="check-row"><input type="radio" name="portion-html" id="portion-html-mellan" value="Mellan"><label for="portion-html-mellan">Mellan</label></div>
+            <div class="check-row"><input type="radio" name="portion-html" id="portion-html-stor" value="Stor"><label for="portion-html-stor">Stor</label></div>
+          </fieldset>
+          <p class="result" id="portion-html-result" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="radiogroup" med role="radio"</h4>
+          <p>Upp/vänster pil och ner/höger pil flyttar och väljer, med omstart i andra änden. Mellanslag väljer det alternativ som har fokus.</p>
+          <span id="portion-aria-label" class="field-label">Portionsstorlek</span>
+          <div role="radiogroup" aria-labelledby="portion-aria-label" id="portion-aria" class="aria-radiogroup">
+            <div role="radio" aria-checked="false" tabindex="0" class="aria-radio">Liten</div>
+            <div role="radio" aria-checked="false" tabindex="-1" class="aria-radio">Mellan</div>
+            <div role="radio" aria-checked="false" tabindex="-1" class="aria-radio">Stor</div>
+          </div>
+          <p class="result" id="portion-aria-result" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="kryssruta-tre-lagen" aria-labelledby="kryssruta-tre-lagen-h">
+        <h3 id="kryssruta-tre-lagen-h">Kryssruta med tre lägen</h3>
+        <p class="pattern-desc">En "Välj alla"-ruta som styr flera underordnade rutor. När bara några av dem är ikryssade är huvudrutan i ett tredje läge, delvis ikryssad, som läses upp som "delvis markerad", "halvkryssad" eller liknande.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> Kryssruta med egenskapen indeterminate</h4>
+          <p>Det tredje läget finns inte som HTML-attribut, utan sätts med JavaScript via egenskapen indeterminate.</p>
+          <fieldset>
+            <legend>Tillbehör till korven</legend>
+            <div class="check-row"><input type="checkbox" id="extras-all-html" aria-controls="extra-html-ketchup extra-html-senap extra-html-lok"><label for="extras-all-html">Välj alla tillbehör</label></div>
+            <ul class="check-children">
+              <li class="check-row"><input type="checkbox" id="extra-html-ketchup" class="extra-html"><label for="extra-html-ketchup">Ketchup</label></li>
+              <li class="check-row"><input type="checkbox" id="extra-html-senap" class="extra-html"><label for="extra-html-senap">Senap</label></li>
+              <li class="check-row"><input type="checkbox" id="extra-html-lok" class="extra-html"><label for="extra-html-lok">Rostad lök</label></li>
+            </ul>
+          </fieldset>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="checkbox" med aria-checked="mixed"</h4>
+          <p>Varje ruta är ett eget tabbstopp. Mellanslag växlar. Huvudrutan kryssar i alla om den är tom eller delvis ikryssad, och kryssar ur alla om den är helt ikryssad.</p>
+          <div role="group" aria-labelledby="extras-aria-label" class="aria-checkgroup">
+            <span id="extras-aria-label" class="field-label">Tillbehör till korven</span>
+            <div role="checkbox" aria-checked="false" tabindex="0" id="extras-all-aria" class="aria-checkbox" aria-controls="extra-aria-ketchup extra-aria-senap extra-aria-lok">Välj alla tillbehör</div>
+            <div class="check-children">
+              <div role="checkbox" aria-checked="false" tabindex="0" id="extra-aria-ketchup" class="aria-checkbox extra-aria">Ketchup</div>
+              <div role="checkbox" aria-checked="false" tabindex="0" id="extra-aria-senap" class="aria-checkbox extra-aria">Senap</div>
+              <div role="checkbox" aria-checked="false" tabindex="0" id="extra-aria-lok" class="aria-checkbox extra-aria">Rostad lök</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="slider" aria-labelledby="slider-h">
+        <h3 id="slider-h">Slider</h3>
+        <p class="pattern-desc">Ett värde inom ett intervall. Jämför särskilt hur värdet läses upp: det inbyggda reglaget läser bara siffran, medan den egenbyggda använder aria-valuetext för att läsa upp siffran med enhet.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> &lt;input type="range"&gt;</h4>
+          <label for="temp-range-html">Temperatur i terrariet</label>
+          <div class="slider-wrap">
+            <input type="range" id="temp-range-html" min="18" max="30" step="1" value="24">
+            <span class="slider-value" id="temp-range-html-value" aria-hidden="true">24 °C</span>
+          </div>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="slider" med aria-valuetext</h4>
+          <p>Höger/upp pil ökar och vänster/ner pil minskar med en grad. Page Up och Page Down ändrar med tre grader, Home och End går till lägsta och högsta. Går även att klicka eller dra på skenan.</p>
+          <span id="temp-slider-label" class="field-label">Temperatur i terrariet</span>
+          <div class="slider-wrap">
+            <div class="slider-rail" id="temp-slider-rail">
+              <div class="slider-fill" id="temp-slider-fill"></div>
+              <div role="slider" tabindex="0" id="temp-slider" class="slider-thumb" aria-labelledby="temp-slider-label" aria-valuemin="18" aria-valuemax="30" aria-valuenow="24" aria-valuetext="24 grader Celsius"></div>
+            </div>
+            <span class="slider-value" id="temp-slider-value" aria-hidden="true">24 °C</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="spinbutton" aria-labelledby="spinbutton-h">
+        <h3 id="spinbutton-h">Spinbutton (nummerfält med stegning)</h3>
+        <p class="pattern-desc">Ett nummerfält där värdet kan skrivas in eller stegas upp och ner. Tillåtna värden är 1 till 10.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> &lt;input type="number"&gt;</h4>
+          <p>Upp och ner pil stegar värdet. Stegningsknapparna som vissa webbläsare visar är ofta små och svåra att träffa, och går inte att nå med Tab.</p>
+          <label for="tickets-html">Antal biljetter</label>
+          <input type="number" id="tickets-html" min="1" max="10" value="2">
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="spinbutton" med egna knappar</h4>
+          <p>Upp och ner pil stegar med 1, Page Up och Page Down med 5, Home och End går till 1 och 10. Du kan också skriva ett värde och trycka Enter eller lämna fältet. Minus- och plusknapparna är till för mus och pekskärm och nås inte med Tab, enligt det vedertagna mönstret.</p>
+          <label for="tickets-aria">Antal biljetter</label>
+          <div class="spin-wrap">
+            <button type="button" id="tickets-aria-dec" class="secondary" tabindex="-1" aria-label="Minska antal biljetter" aria-controls="tickets-aria">&minus;</button>
+            <input type="text" id="tickets-aria" class="spin-input" role="spinbutton" inputmode="numeric" autocomplete="off" aria-valuemin="1" aria-valuemax="10" aria-valuenow="2" value="2">
+            <button type="button" id="tickets-aria-inc" class="secondary" tabindex="-1" aria-label="Öka antal biljetter" aria-controls="tickets-aria">+</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="forlopp-matare" aria-labelledby="forlopp-matare-h">
+        <h3 id="forlopp-matare-h">Förlopp och mätare</h3>
+        <p class="pattern-desc">Ett förlopp (progress) visar hur långt en pågående uppgift har kommit. En mätare (meter) visar ett mått inom ett känt intervall, till exempel batterinivå, och ändras inte av sig själv. Skärmläsare meddelar sällan förloppsändringar automatiskt, därför får båda varianterna ett statusmeddelande när nedladdningen är klar.</p>
+
+        <div class="variant">
+          <h4><span class="badge badge-html">HTML</span> &lt;progress&gt; och &lt;meter&gt;</h4>
+          <label for="download-html">Nedladdning av djurbilder</label>
+          <div class="bar-row">
+            <progress id="download-html" max="100" value="0"></progress>
+            <span class="bar-value" id="download-html-value" aria-hidden="true">0 %</span>
+          </div>
+          <button type="button" id="download-html-btn">Starta nedladdning</button>
+          <p class="result" id="download-html-result" role="status" aria-live="polite"></p>
+
+          <label for="battery-html">Batterinivå i djurkameran</label>
+          <div class="bar-row">
+            <meter id="battery-html" min="0" max="100" low="20" high="60" optimum="100" value="45"></meter>
+            <span class="bar-value" id="battery-html-value" aria-hidden="true">45 % (medel)</span>
+          </div>
+          <button type="button" id="battery-html-btn" class="secondary">Byt batterinivå</button>
+        </div>
+
+        <div class="variant">
+          <h4><span class="badge badge-aria">ARIA</span> role="progressbar" och role="meter"</h4>
+          <p>role="meter" är relativt ny (ARIA 1.2), så vissa skärmläsare läser upp den som ett förlopp eller bara som en siffra.</p>
+          <span id="download-aria-label" class="field-label">Nedladdning av djurbilder</span>
+          <div class="bar-row">
+            <div role="progressbar" id="download-aria" class="bar" aria-labelledby="download-aria-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar-fill" style="width: 0%"></div></div>
+            <span class="bar-value" id="download-aria-value" aria-hidden="true">0 %</span>
+          </div>
+          <button type="button" id="download-aria-btn">Starta nedladdning</button>
+          <p class="result" id="download-aria-result" role="status" aria-live="polite"></p>
+
+          <span id="battery-aria-label" class="field-label">Batterinivå i djurkameran</span>
+          <div class="bar-row">
+            <div role="meter" id="battery-aria" class="bar" aria-labelledby="battery-aria-label" aria-valuemin="0" aria-valuemax="100" aria-valuenow="45" aria-valuetext="45 procent, medel"><div class="bar-fill" style="width: 45%"></div></div>
+            <span class="bar-value" id="battery-aria-value" aria-hidden="true">45 % (medel)</span>
+          </div>
+          <button type="button" id="battery-aria-btn" class="secondary">Byt batterinivå</button>
         </div>
       </section>
     </section>
@@ -2216,6 +2432,208 @@
       clearTimeout(toastTimer);
       setTimeout(function () { toast.textContent = "Räven lades till i dina favoriter."; }, 50);
       toastTimer = setTimeout(function () { toast.textContent = ""; }, 8000);
+    });
+  })();
+
+  // --- Radio group ---
+  (function () {
+    var htmlResult = document.getElementById("portion-html-result");
+    Array.prototype.slice.call(document.querySelectorAll('input[name="portion-html"]')).forEach(function (r) {
+      r.addEventListener("change", function () { htmlResult.textContent = "Vald portion: " + r.value; });
+    });
+
+    var group = document.getElementById("portion-aria");
+    var radios = Array.prototype.slice.call(group.querySelectorAll('[role="radio"]'));
+    var result = document.getElementById("portion-aria-result");
+    function check(index) {
+      var i = ((index % radios.length) + radios.length) % radios.length;
+      radios.forEach(function (r, j) {
+        r.setAttribute("aria-checked", j === i ? "true" : "false");
+        r.setAttribute("tabindex", j === i ? "0" : "-1");
+      });
+      radios[i].focus();
+      result.textContent = "Vald portion: " + radios[i].textContent;
+    }
+    group.addEventListener("keydown", function (e) {
+      var current = radios.indexOf(document.activeElement);
+      if (current === -1) { return; }
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); check(current + 1); }
+      else if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); check(current - 1); }
+      else if (e.key === " ") { e.preventDefault(); check(current); }
+    });
+    radios.forEach(function (r, i) { r.addEventListener("click", function () { check(i); }); });
+  })();
+
+  // --- Tri-state checkbox ---
+  (function () {
+    var allHtml = document.getElementById("extras-all-html");
+    var childrenHtml = Array.prototype.slice.call(document.querySelectorAll(".extra-html"));
+    function syncHtmlParent() {
+      var checked = childrenHtml.filter(function (c) { return c.checked; }).length;
+      allHtml.checked = checked === childrenHtml.length;
+      allHtml.indeterminate = checked > 0 && checked < childrenHtml.length;
+    }
+    allHtml.addEventListener("change", function () {
+      childrenHtml.forEach(function (c) { c.checked = allHtml.checked; });
+    });
+    childrenHtml.forEach(function (c) { c.addEventListener("change", syncHtmlParent); });
+
+    var allAria = document.getElementById("extras-all-aria");
+    var childrenAria = Array.prototype.slice.call(document.querySelectorAll(".extra-aria"));
+    function syncAriaParent() {
+      var checked = childrenAria.filter(function (c) { return c.getAttribute("aria-checked") === "true"; }).length;
+      allAria.setAttribute("aria-checked", checked === 0 ? "false" : (checked === childrenAria.length ? "true" : "mixed"));
+    }
+    function toggleAll() {
+      var next = allAria.getAttribute("aria-checked") === "true" ? "false" : "true";
+      childrenAria.forEach(function (c) { c.setAttribute("aria-checked", next); });
+      allAria.setAttribute("aria-checked", next);
+    }
+    function toggleChild(c) {
+      c.setAttribute("aria-checked", c.getAttribute("aria-checked") === "true" ? "false" : "true");
+      syncAriaParent();
+    }
+    [allAria].concat(childrenAria).forEach(function (box) {
+      var action = box === allAria ? toggleAll : function () { toggleChild(box); };
+      box.addEventListener("click", action);
+      box.addEventListener("keydown", function (e) {
+        if (e.key === " ") { e.preventDefault(); action(); }
+      });
+    });
+  })();
+
+  // --- Slider ---
+  (function () {
+    var range = document.getElementById("temp-range-html");
+    var rangeValue = document.getElementById("temp-range-html-value");
+    range.addEventListener("input", function () { rangeValue.textContent = range.value + " °C"; });
+
+    var slider = document.getElementById("temp-slider");
+    var rail = document.getElementById("temp-slider-rail");
+    var fill = document.getElementById("temp-slider-fill");
+    var valueText = document.getElementById("temp-slider-value");
+    var min = Number(slider.getAttribute("aria-valuemin"));
+    var max = Number(slider.getAttribute("aria-valuemax"));
+
+    function setValue(v) {
+      v = Math.max(min, Math.min(max, Math.round(v)));
+      var pct = ((v - min) / (max - min)) * 100;
+      slider.setAttribute("aria-valuenow", String(v));
+      slider.setAttribute("aria-valuetext", v + " grader Celsius");
+      slider.style.left = pct + "%";
+      fill.style.width = pct + "%";
+      valueText.textContent = v + " °C";
+    }
+    function current() { return Number(slider.getAttribute("aria-valuenow")); }
+    function valueFromPointer(e) {
+      var r = rail.getBoundingClientRect();
+      return min + ((e.clientX - r.left) / r.width) * (max - min);
+    }
+    setValue(current());
+
+    slider.addEventListener("keydown", function (e) {
+      var steps = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 3, PageDown: -3 };
+      if (e.key in steps) { e.preventDefault(); setValue(current() + steps[e.key]); }
+      else if (e.key === "Home") { e.preventDefault(); setValue(min); }
+      else if (e.key === "End") { e.preventDefault(); setValue(max); }
+    });
+    rail.addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      rail.setPointerCapture(e.pointerId);
+      setValue(valueFromPointer(e));
+      slider.focus();
+    });
+    rail.addEventListener("pointermove", function (e) {
+      if (rail.hasPointerCapture(e.pointerId)) { setValue(valueFromPointer(e)); }
+    });
+  })();
+
+  // --- Spinbutton ---
+  (function () {
+    var input = document.getElementById("tickets-aria");
+    var min = Number(input.getAttribute("aria-valuemin"));
+    var max = Number(input.getAttribute("aria-valuemax"));
+
+    function setValue(v) {
+      v = Math.max(min, Math.min(max, v));
+      input.value = String(v);
+      input.setAttribute("aria-valuenow", String(v));
+    }
+    function current() { return Number(input.getAttribute("aria-valuenow")); }
+    function commitTyped() {
+      var typed = parseInt(input.value, 10);
+      setValue(isNaN(typed) ? current() : typed);
+    }
+
+    input.addEventListener("keydown", function (e) {
+      var steps = { ArrowUp: 1, ArrowDown: -1, PageUp: 5, PageDown: -5 };
+      if (e.key in steps) { e.preventDefault(); commitTyped(); setValue(current() + steps[e.key]); }
+      else if (e.key === "Home") { e.preventDefault(); setValue(min); }
+      else if (e.key === "End") { e.preventDefault(); setValue(max); }
+      else if (e.key === "Enter") { e.preventDefault(); commitTyped(); }
+    });
+    input.addEventListener("input", function () {
+      var typed = parseInt(input.value, 10);
+      if (!isNaN(typed) && typed >= min && typed <= max) { input.setAttribute("aria-valuenow", String(typed)); }
+    });
+    input.addEventListener("blur", commitTyped);
+    document.getElementById("tickets-aria-dec").addEventListener("click", function () { setValue(current() - 1); input.focus(); });
+    document.getElementById("tickets-aria-inc").addEventListener("click", function () { setValue(current() + 1); input.focus(); });
+  })();
+
+  // --- Progress and meter ---
+  (function () {
+    function runDownload(btn, setProgress, result) {
+      var timer = null;
+      btn.addEventListener("click", function () {
+        clearInterval(timer);
+        var value = 0;
+        setProgress(0);
+        result.textContent = "Nedladdningen har startat.";
+        timer = setInterval(function () {
+          value += 10;
+          setProgress(value);
+          if (value >= 100) {
+            clearInterval(timer);
+            result.textContent = "Nedladdningen är klar.";
+          }
+        }, 500);
+      });
+    }
+
+    var htmlProgress = document.getElementById("download-html");
+    var htmlProgressValue = document.getElementById("download-html-value");
+    runDownload(document.getElementById("download-html-btn"), function (v) {
+      htmlProgress.value = v;
+      htmlProgressValue.textContent = v + " %";
+    }, document.getElementById("download-html-result"));
+
+    var ariaProgress = document.getElementById("download-aria");
+    var ariaProgressValue = document.getElementById("download-aria-value");
+    runDownload(document.getElementById("download-aria-btn"), function (v) {
+      ariaProgress.setAttribute("aria-valuenow", String(v));
+      ariaProgress.firstElementChild.style.width = v + "%";
+      ariaProgressValue.textContent = v + " %";
+    }, document.getElementById("download-aria-result"));
+
+    var LEVELS = [{ v: 45, label: "medel" }, { v: 90, label: "hög" }, { v: 15, label: "låg" }];
+    var htmlIndex = 0, ariaIndex = 0;
+    var htmlMeter = document.getElementById("battery-html");
+    var htmlMeterValue = document.getElementById("battery-html-value");
+    document.getElementById("battery-html-btn").addEventListener("click", function () {
+      htmlIndex = (htmlIndex + 1) % LEVELS.length;
+      htmlMeter.value = LEVELS[htmlIndex].v;
+      htmlMeterValue.textContent = LEVELS[htmlIndex].v + " % (" + LEVELS[htmlIndex].label + ")";
+    });
+    var ariaMeter = document.getElementById("battery-aria");
+    var ariaMeterValue = document.getElementById("battery-aria-value");
+    document.getElementById("battery-aria-btn").addEventListener("click", function () {
+      ariaIndex = (ariaIndex + 1) % LEVELS.length;
+      var level = LEVELS[ariaIndex];
+      ariaMeter.setAttribute("aria-valuenow", String(level.v));
+      ariaMeter.setAttribute("aria-valuetext", level.v + " procent, " + level.label);
+      ariaMeter.firstElementChild.style.width = level.v + "%";
+      ariaMeterValue.textContent = level.v + " % (" + level.label + ")";
     });
   })();
 })();
